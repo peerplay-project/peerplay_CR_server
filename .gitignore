@@ -1,12 +1,3 @@
-.idea
-build/
-build-*/
-.vs/
-CMakeSettings.json
-.vscode
-.DS_Store
-run.sh
-debug.sh
-memcheck.sh
-valgrind_ignore
-yarn.lock
+node_modules/
+package-lock.json
+dist/
