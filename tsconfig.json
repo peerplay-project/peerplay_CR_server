@@ -4,17 +4,14 @@
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "esModuleInterop": true,
-    // "baseUrl": "src",
+    "baseUrl": "src",
     "outDir": "dist",
     "lib": [
       "es2015"
     ],
-    "target": "es6",
+    "target": "ES6",
     "strict": true
-  },
-  "include": [
-    "./src/**/*.ts"
-  ]
+  }
 }
