@@ -1,3 +1,7 @@
 node_modules/
 package-lock.json
 dist/
+DB_nodes/
+DB_accounts/
+.vscode/
+src/environment.ts

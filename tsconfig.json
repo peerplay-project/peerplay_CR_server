@@ -5,6 +5,7 @@
     "removeComments": true,
     "preserveConstEnums": true,
     "sourceMap": false,
+    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "baseUrl": "src",
     "outDir": "dist",
