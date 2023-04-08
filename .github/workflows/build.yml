@@ -21,8 +21,11 @@ jobs:
         run: |
           npm install -g typescript
           npm install
+      - name: Rename environment.ts.exemple
+        run: mv src/environment.ts.exemple src/environment.ts
       - name: Compile Project
-        run: npm run compile
+        run: |
+        npm run compile
       - name: Create archive
         run: |
           zip -r peerplay-cr-server.zip ./dist/
