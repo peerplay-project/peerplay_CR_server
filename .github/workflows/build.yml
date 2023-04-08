@@ -18,14 +18,15 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies  
-        run: npm install
-      - name: Compile Project
-        run: npm run compile --if-present
-      - name: Create archive
         run: |
-          zip -r peerplay-cr-server.zip ./dist/
+          npm install -g typescript
+          npm install
+      - name: Rename environment.ts.exemple
+        run: mv src/environment.ts.exemple src/environment.ts
+      - name: Compile Project
+        run: npm run compile
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
           name: peerplay-cr-server-build
-          path: peerplay-cr-server.zip
+          path: dist/

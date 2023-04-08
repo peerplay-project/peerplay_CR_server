@@ -1,8 +1,8 @@
 node_modules/
 package-lock.json
 dist/
-DB_nodes/
-DB_accounts/
+/DB_nodes/
+/DB_accounts/
 DB_nodes-encrypted/
 DB_accounts-encrypted/
 .vscode/
