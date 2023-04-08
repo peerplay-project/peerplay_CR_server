@@ -25,11 +25,8 @@ jobs:
         run: mv src/environment.ts.exemple src/environment.ts
       - name: Compile Project
         run: npm run compile
-      - name: Create archive
-        run: |
-          zip -r peerplay-cr-server.zip ./dist/
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
           name: peerplay-cr-server-build
-          path: peerplay-cr-server.zip
+          path: dist/
