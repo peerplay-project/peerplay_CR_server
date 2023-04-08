@@ -106,18 +106,18 @@ function parseArgs2Obj(args: string[]) {
 
 async function main(argv: string[]) {
   let argsObj = parseArgs2Obj(argv);
-  const server_ip = argsObj.ip_address || "";
+  const domain_name = argsObj.domain_name || "";
   const SlpExternalServer = argsObj.open_external_server || false;
   const MinimalPortRange = parseInt(argsObj.minimal_port_range || 0);
   let ExternalPortNum = parseInt(argsObj.external_server_port || 5982);
   const DatabaseSyncLimit = parseInt(argsObj.database_sync_limit || 20);
   const DatabasePassword = argsObj.database_password || database_password;
   const CustomDatabaseList = argsObj.custom_database_list || [];
-  const PublicAPIPort = 5981;
+  const PublicAPIPort = 5984;
   const PrivateAPIPort = 5985;
   const LocalPortNum = 5981;
-  const InterserverPortNum = 5983;
-  const DatabasePortNum = 5984;
+  const InterserverPortNum = 5982;
+  const DatabasePortNum = 5983;
   if (SlpExternalServer === false) {
     ExternalPortNum = 0;
   }
@@ -133,7 +133,7 @@ async function main(argv: string[]) {
   if (DatabasePassword !== "") {
     const PeerplayData: PeerplayData = {
       // Peerplay Config
-      ip: server_ip,
+      ip: domain_name,
       PublicAPIPort: PublicAPIPort,
       PrivateAPIPort: PrivateAPIPort,
       LocalPortNum: LocalPortNum,
@@ -256,10 +256,10 @@ if (process.argv.find((element) => element === "--help")) {
       )
   );
   console.log(
-    "| - database_password <password> : 'Password to access the database' (default: '')"
+    "| - database_password <password> : 'Change Decryption Password' (Not Recommanded for Users)"
   );
   console.log(
-    "| - custom_database_list ['<ip>:<port>','<ip>:<port>'] : 'List of custom databases to synchronize with' (default: [])"
+    "| - custom_database_list ['<ip>:<port>',] : 'Replace Root Database List' (default: []) (Not Recommanded for Users)"
   );
   console.log("/");
 } else {
