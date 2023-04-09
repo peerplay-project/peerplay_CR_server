@@ -2,6 +2,7 @@ export interface PeerplayData {
     ipv6?: any; //Ne Pas Remplir
     ipv4?: any; //Ne Pas Remplir
     // Peerplay Settings
+    uuid: string;
     ip: string
     PublicAPIPort: number;
     PrivateAPIPort: number;

@@ -106,15 +106,16 @@ function parseArgs2Obj(args: string[]) {
 
 async function main(argv: string[]) {
   let argsObj = parseArgs2Obj(argv);
+  const uuid = argsObj.uuid;
   const domain_name = argsObj.domain_name || "";
   const SlpExternalServer = argsObj.open_external_server || false;
   const MinimalPortRange = parseInt(argsObj.minimal_port_range || 0);
-  let ExternalPortNum = parseInt(argsObj.external_server_port || 5982);
+  let ExternalPortNum = parseInt(argsObj.external_server_port || 5984);
   const DatabaseSyncLimit = parseInt(argsObj.database_sync_limit || 20);
   const DatabasePassword = argsObj.database_password || database_password;
   const CustomDatabaseList = argsObj.custom_database_list || [];
-  const PublicAPIPort = 5984;
-  const PrivateAPIPort = 5985;
+  const PublicAPIPort = 5985;
+  const PrivateAPIPort = 5986;
   const LocalPortNum = 5981;
   const InterserverPortNum = 5982;
   const DatabasePortNum = 5983;
@@ -131,8 +132,19 @@ async function main(argv: string[]) {
   );
   console.log("");
   if (DatabasePassword !== "") {
+    let custom_database_list: string[] = []
+    if (typeof CustomDatabaseList === 'string'){
+      CustomDatabaseList.split(',').forEach((element) => {
+        custom_database_list.push(element);
+      });
+    }
+    else
+    {
+      custom_database_list = CustomDatabaseList;
+    }
     const PeerplayData: PeerplayData = {
       // Peerplay Config
+      uuid: uuid,
       ip: domain_name,
       PublicAPIPort: PublicAPIPort,
       PrivateAPIPort: PrivateAPIPort,
@@ -143,7 +155,7 @@ async function main(argv: string[]) {
       MinimalPortRange: MinimalPortRange,
       DatabaseSyncLimit: DatabaseSyncLimit,
       DatabasePassword: DatabasePassword,
-      CustomDatabaseList: CustomDatabaseList,
+      CustomDatabaseList: custom_database_list,
     };
     await tasks
       .run({
@@ -259,7 +271,7 @@ if (process.argv.find((element) => element === "--help")) {
     "| - database_password <password> : 'Change Decryption Password' (Not Recommanded for Users)"
   );
   console.log(
-    "| - custom_database_list ['<ip>:<port>',] : 'Replace Root Database List' (default: []) (Not Recommanded for Users)"
+    "| - custom_database_list <ip>:<port>,<ip>:<port> : 'Replace Root Database List' (default: []) (Not Recommanded for Users)"
   );
   console.log("/");
 } else {

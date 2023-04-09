@@ -1,14 +1,37 @@
 import { root_databases } from "../environment";
-const database_list = ["nodes","accounts"];
+const ncrypt = require("ncrypt-js");
+const database_list = ["nodes", "accounts"];
+const PouchDB = require("pouchdb");
+interface database {
+  address: string;
+  port: number;
+}
 
-export function syncronize_all_databases(database_password: string,database_sync_limit: number,database_custom_list: string[]) {
-  const PouchDB = require("pouchdb");
-  PouchDB.plugin(require("comdb"));
+export function open_all_databases(port: number) {
+  var app = require("express-pouchdb")({
+  });
+  app.setPouchDB(PouchDB);
+  database_list.forEach((db_name) => {
+    console.log(`Starting Database ${db_name}`);
+    const database = new PouchDB(`DB_${db_name}`);
+    console.log(`Started Database ${db_name}`);
+  });
+  app.listen(port);
+  return "SUCCESS";
+}
+
+export function syncronize_all_databases(
+  database_sync_limit: number,
+  database_custom_list: string[]
+) {
   database_list.forEach((db_name: string) => {
     const DB = new PouchDB(`DB_${db_name}`);
-    DB.setPassword(database_password).then(() => {
-      syncronize_database(DB, `DB_${db_name}`, database_sync_limit, database_password);
-    });
+    syncronize_database(
+      DB,
+      `DB_${db_name}`,
+      database_sync_limit,
+      database_custom_list
+    );
   });
   return "SUCCESS";
 }
@@ -26,47 +49,52 @@ async function syncronize_database(
   },
   db_name: string,
   db_sync_limit: number,
-  db_password: string
+  database_custom_list: string[]
 ) {
-  const PouchDB = require("pouchdb");
-  PouchDB.plugin(require("comdb"));
   let nodeDB = new PouchDB("DB_nodes");
   try {
     // Start DB Syncing
-    nodeDB.setPassword(db_password).then(async () => {
-      // Keep track of whether a sync is in progress for each database
-      interface SyncInProgress {
-        [dbUrl: string]: boolean;
-      }
-      const syncInProgress: SyncInProgress = {};
-
-      // Try to synchronize all root databases
-      root_databases.forEach((database) => {
-        const dbUrl = `http://${database.address}:${database.port}/${db_name}`;
-        // Check if sync is already in progress for this database
-        if (syncInProgress[dbUrl]) {
-          console.log(`Sync is already in progress for ${dbUrl}`);
-          return;
-        }
-        // Start sync and set syncInProgress flag to true
-        syncInProgress[dbUrl] = true;
-        const db = new PouchDB(dbUrl);
-        pouchDB
-          .sync(db, {
-            live: true,
-          })
-          .on("error", function (err: any) {
-            console.error(`Sync failed for ${dbUrl}`, err);
-
-            // set syncInProgress flag to false to allow re-sync attempt
-            syncInProgress[dbUrl] = false;
-          })
-          .on("complete", function () {
-            // set syncInProgress flag to false once sync is complete
-            syncInProgress[dbUrl] = false;
-          });
+    // Keep track of whether a sync is in progress for each database
+    interface SyncInProgress {
+      [dbUrl: string]: boolean;
+    }
+    const syncInProgress: SyncInProgress = {};
+    let databases: database[] = [];
+    if (database_custom_list.length === 0) {
+      databases = root_databases;
+    } else {
+      database_custom_list.map((db: string) => {
+        const database = db.split(":");
+        databases.push({ address: database[0], port: parseInt(database[1]) });
       });
-      // ----
+    }
+
+    // Try to synchronize all root databases
+    databases.forEach((database: database) => {
+      const dbUrl = `http://${database.address}:${database.port}/${db_name}`;
+      // Check if sync is already in progress for this database
+      if (syncInProgress[dbUrl]) {
+        console.log(`Sync is already in progress for ${dbUrl}`);
+        return;
+      }
+      // Start sync and set syncInProgress flag to true
+      syncInProgress[dbUrl] = true;
+      const db = new PouchDB(dbUrl);
+      pouchDB
+        .sync(db, {
+          live: true,
+        })
+        .on("error", function (err: any) {
+          console.error(`Sync failed for ${dbUrl}`, err);
+
+          // set syncInProgress flag to false to allow re-sync attempt
+          syncInProgress[dbUrl] = false;
+        })
+        .on("complete", function () {
+          // set syncInProgress flag to false once sync is complete
+          syncInProgress[dbUrl] = false;
+        });
     });
+    // ----
   } catch {}
 }

@@ -8,7 +8,6 @@ import {
 import { isString } from "util";
 import { SLP_ROUTER } from "../routers/default";
 const PouchDB = require("pouchdb");
-PouchDB.plugin(require("comdb"));
 import { NodesTable } from "../../../../databases/DB_nodes/main";
 let database = new PouchDB("DB_nodes");
 interface peer_msg {
@@ -89,12 +88,7 @@ const server = createSocket({
 
 server.on("error", (err) => onError(err));
 server.on("close", () => onClose());
-server.on(
-  "message",
-  (
-    msg: Buffer,
-  ) => onMessage(msg)
-);
+server.on("message", (msg: Buffer) => onMessage(msg));
 
 function clearCacheItem<T, U extends { expireAt: number }>(map: Map<T, U>) {
   const now = Date.now();
@@ -192,9 +186,7 @@ function onPacket(
   }
 }
 
-async function onMessage(
-  Pmsg: Buffer,
-): Promise<void> {
+async function onMessage(Pmsg: Buffer): Promise<void> {
   const is_msg: peer_msg = JSON.parse(Pmsg.toString());
   if (is_msg.msg.byteLength === 0) {
     return;
@@ -209,20 +201,30 @@ async function onMessage(
   onPacket(peer.AddressInfo, type, payload);
 }
 
-export function start_INTERSERVER_USRV(ip: string, port: number, database_password: string) {
+export function start_INTERSERVER_USRV(
+  ip: string,
+  port: number,
+  database_password: string
+) {
   server_ip = ip;
   server_port = port;
-  db_password = database_password
+  db_password = database_password;
   server.bind(port);
 }
 
-export async function sendTo_INTERSERVER_USRV(
-{ address, type, payload }: {
-  address: string |
-  {
-    address: string;
-    port: number;
-  }; type: ForwarderType; payload: Buffer;
+export async function sendTo_INTERSERVER_USRV({
+  address,
+  type,
+  payload,
+}: {
+  address:
+    | string
+    | {
+        address: string;
+        port: number;
+      };
+  type: ForwarderType;
+  payload: Buffer;
 }) {
   if (isString(address)) {
     const AddressInfo = str2addr(address);
@@ -240,41 +242,42 @@ export async function sendTo_INTERSERVER_USRV(
 
 export async function sendBroadcast_INTERSERVER_USRV(
   type: ForwarderType,
-  payload: Buffer,
+  payload: Buffer
 ) {
-  database.setPassword(db_password).then(() => {
-    database
-      .allDocs({
-        include_docs: true,
-        attachments: true,
-      })
-      .then((results: { rows: any[]; }) => {
-        results.rows.forEach((result) => {
-          try {
-            if (result.doc !== undefined) {
-              // @ts-ignore : si une erreur se produit a cette endroit l'element sera simplement ignoré / non compté
-              const node: NodesTable = result.doc as NodesTable;
-              if (
-                node.address !== server_ip &&
-                node.interserver_port !== server_port
-              ) {
-                sendTo_INTERSERVER_USRV(
-                {
-                  address: {
-                    address: node.address,
-                    port: node.interserver_port,
-                  }, type, payload
-                }                );
-              }
+  const ncrypt = require("ncrypt-js");
+  const ncryptObject = new ncrypt(db_password);
+  database
+    .allDocs({
+      include_docs: true,
+      attachments: true,
+    })
+    .then((results: { rows: any[] }) => {
+      results.rows.forEach((result) => {
+        try {
+          if (result.doc !== undefined) {
+            // @ts-ignore : si une erreur se produit a cette endroit l'element sera simplement ignoré / non compté
+            const node: NodesTable = result.doc as NodesTable;
+            if (
+              ncryptObject.decrypt(node.address) !== server_ip &&
+              node.interserver_port !== server_port
+            ) {
+              sendTo_INTERSERVER_USRV({
+                address: {
+                  address: ncryptObject.decrypt(node.address),
+                  port: node.interserver_port,
+                },
+                type,
+                payload,
+              });
             }
-          } catch (error) {
-            // Do Nothing
           }
-        });
-      })
-      .catch(function (err: any) {
-        console.log(err);
+        } catch (error) {
+          // Do Nothing
+        }
       });
+    })
+    .catch(function (err: any) {
+      console.log(err);
     });
 }
 
