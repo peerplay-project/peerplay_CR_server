@@ -1,4 +1,4 @@
-export const Timeout = 10 * 1000
+export const Timeout = 30 * 1000
 
 export enum ForwarderType {
   Keepalive = 0,

@@ -1,9 +1,9 @@
-import { createSocket, Socket, AddressInfo } from "dgram";
+import { createSocket, AddressInfo } from "dgram";
 import {
   ForwarderType,
   ForwarderTypeMap,
   Timeout,
-  lookup4,
+  lookup6,
 } from "../../../toolkit";
 import { isString } from "util";
 import { SLP_ROUTER } from "../routers/default";
@@ -65,8 +65,8 @@ class PeerManager {
 
 const manager: PeerManager = new PeerManager();
 const server = createSocket({
-  type: "udp4",
-  lookup: lookup4,
+  type: "udp6",
+  lookup: lookup6,
 });
 
 server.on("error", (err) => onError(err));
@@ -122,7 +122,7 @@ function onPing(rinfo: AddressInfo, msg: Buffer) {
 
 function sendToRaw(addr: AddressInfo, msg: Buffer) {
   const { address, port } = addr;
-  server.send(msg, port, address, (error, bytes) => {
+  server.send(msg, port, address, (error) => {
     if (error) {
       manager.delete(addr);
     }
@@ -196,11 +196,11 @@ export async function sendBroadcast_LOCAL_USRV(
   if (except !== undefined) {
     const AddressInfo = str2addr(except);
     for (let peer of manager.all(AddressInfo)) {
-      sendTo_LOCAL_USRV(peer.AddressInfo, type, payload);
+      sendTo_LOCAL_USRV(peer.AddressInfo, type, payload).then();
     }
   } else {
     for (let peer of manager.all()) {
-      sendTo_LOCAL_USRV(peer.AddressInfo, type, payload);
+      sendTo_LOCAL_USRV(peer.AddressInfo, type, payload).then();
     }
   }
 }

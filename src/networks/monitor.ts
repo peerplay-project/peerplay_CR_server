@@ -1,6 +1,6 @@
 import Koa from 'koa'
 import cors from 'koa2-cors'
-import Router, { IRouterContext } from 'koa-router' 
+import Router, { IRouterContext } from 'koa-router'
 import { get_server_info, get_server_size, get_router_log } from './public/network'
 
 export class ServerMonitor {
@@ -22,8 +22,8 @@ export class ServerMonitor {
         }
       }
     })
-    this.private_router.get('/status', async ctx => { this.handleGetInfo(ctx) })
-    this.private_router.get('/logs', async ctx => { this.getLogs(ctx) })
+    this.private_router.get('/status', async ctx => { await this.handleGetInfo(ctx) })
+    this.private_router.get('/logs', async ctx => { await this.getLogs(ctx) })
     // Public Router Logs
     this.public_router.all('*', async (ctx, next) => {
       try {
@@ -36,8 +36,8 @@ export class ServerMonitor {
         }
       }
     })
-    this.public_router.get('/accounts/register', async ctx => { this.getLogs(ctx) })
-    this.public_router.get('/accounts/login', async ctx => { this.getLogs(ctx) })
+    this.public_router.get('/accounts/register', async ctx => { await this.getLogs(ctx) })
+    this.public_router.get('/accounts/login', async ctx => { await this.getLogs(ctx) })
   }
   public start(public_port: number, private_port: number) {
     // Start Public API
@@ -55,7 +55,7 @@ export class ServerMonitor {
     const slp_ports = get_server_info()
     let p2p_relay_ip
     let external_ip
-    p2p_relay_ip = `${slp_ports.address}:${slp_ports.interserver}`
+    p2p_relay_ip = `${slp_ports.address}:${slp_ports.interserver_internet}`
     if (slp_ports.external === 0) {
       external_ip = 'DISABLED'
     }

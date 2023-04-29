@@ -12,12 +12,7 @@ export const startingPeerplayComponents = new Listr([
     task: async (ctx,task) => {
       const PeerplayData: PeerplayData = ctx.peerplay_data
       start_USRV(
-        PeerplayData.ip, 
-        PeerplayData.LocalPortNum, 
-        PeerplayData.ExternalPortNum, 
-        PeerplayData.InterserverPortNum,
-        PeerplayData.MinimalPortRange,
-        PeerplayData.DatabasePassword)
+        PeerplayData)
       task.title = chalk.green(task.title + " [OK]")
     }
   },

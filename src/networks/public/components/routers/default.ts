@@ -8,7 +8,7 @@ const IPV4_OFF_DST = 16;
 const IPV4FRAG_OFF_SRC = 0;
 const IPV4FRAG_OFF_DST = 4;
 const Timeout = 30 * 1000;
-
+let count = 0
 let log: string[] = []
 class Node {
   node_type: string;
@@ -45,7 +45,7 @@ export function SLP_ROUTER(node: Node, payload: Buffer, Fragment: boolean) {
   let src_str = ''
   let dst_str = ''
   let count = 0
-  if (Fragment === true) {
+  if (Fragment) {
     src = payload.readInt32BE(IPV4FRAG_OFF_SRC);
     dst = payload.readInt32BE(IPV4FRAG_OFF_DST);
     for (const x of payload.slice(IPV4FRAG_OFF_SRC, IPV4FRAG_OFF_SRC+32).values()){
@@ -109,11 +109,16 @@ log.push(`${moment(Date.now()).format('DD/MM/YYYY HH:mm:ss')} || ${src_str}=>${d
 
 export function clearExpire_SLP_ROUTER(){
   clearRouterCacheItem(ipCache)
+  count++
+  if (count < 29){
+  log = [];
+  count = 0;
+  }
 }
 
 function redirect(node: Node, Fragment: boolean, payload: Buffer){
     let Forwarder
-    if (Fragment === true){
+    if (Fragment){
         Forwarder = ForwarderType.Ipv4Frag
     }
     else
@@ -122,35 +127,35 @@ function redirect(node: Node, Fragment: boolean, payload: Buffer){
     }
     switch(node.node_type){
         case 'LOCAL':
-          sendTo_LOCAL_USRV(node.address, Forwarder, payload)
+          sendTo_LOCAL_USRV(node.address, Forwarder, payload).then()
         break;
         case 'EXTERNAL':
-          sendTo_EXTERNAL_USRV(node.address, Forwarder, payload)
+          sendTo_EXTERNAL_USRV(node.address, Forwarder, payload).then()
         break;
         case 'INTERSERVER':
-          sendTo_INTERSERVER_USRV({ address: node.address, type: Forwarder, payload })
+          sendTo_INTERSERVER_USRV({ address: node.address, type: Forwarder, payload }).then()
         break;
     }
 
 }
 function broadcast(node: Node, Fragment: boolean, payload: Buffer){
     let Forwarder
-    if (Fragment === true){
+    if (Fragment){
         Forwarder = ForwarderType.Ipv4Frag
         switch(node.node_type){
           case 'LOCAL':
-            sendBroadcast_LOCAL_USRV(Forwarder, payload, node.address)
-            sendBroadcast_EXTERNAL_USRV(Forwarder, payload)
-            sendBroadcast_INTERSERVER_USRV(Forwarder, payload)
+            sendBroadcast_LOCAL_USRV(Forwarder, payload, node.address).then()
+            sendBroadcast_EXTERNAL_USRV(Forwarder, payload).then()
+            sendBroadcast_INTERSERVER_USRV(Forwarder, payload).then()
           break;
           case 'EXTERNAL':
-            sendBroadcast_LOCAL_USRV(Forwarder, payload)
-            sendBroadcast_EXTERNAL_USRV(Forwarder, payload, node.address)
-            sendBroadcast_INTERSERVER_USRV(Forwarder, payload)
+            sendBroadcast_LOCAL_USRV(Forwarder, payload).then()
+            sendBroadcast_EXTERNAL_USRV(Forwarder, payload, node.address).then()
+            sendBroadcast_INTERSERVER_USRV(Forwarder, payload).then()
           break;
           case 'INTERSERVER':
-            sendBroadcast_LOCAL_USRV(Forwarder, payload)
-            sendBroadcast_EXTERNAL_USRV(Forwarder, payload)
+            sendBroadcast_LOCAL_USRV(Forwarder, payload).then()
+            sendBroadcast_EXTERNAL_USRV(Forwarder, payload).then()
           break;
         }
     }
@@ -159,18 +164,18 @@ function broadcast(node: Node, Fragment: boolean, payload: Buffer){
         Forwarder = ForwarderType.Ipv4
         switch(node.node_type){
           case 'LOCAL':
-            sendBroadcast_LOCAL_USRV(Forwarder, payload, node.address)
-            sendBroadcast_EXTERNAL_USRV(Forwarder, payload)
-            sendBroadcast_INTERSERVER_USRV(Forwarder, payload)
+            sendBroadcast_LOCAL_USRV(Forwarder, payload, node.address).then()
+            sendBroadcast_EXTERNAL_USRV(Forwarder, payload).then()
+            sendBroadcast_INTERSERVER_USRV(Forwarder, payload).then()
           break;
           case 'EXTERNAL':
-            sendBroadcast_LOCAL_USRV(Forwarder, payload)
-            sendBroadcast_EXTERNAL_USRV(Forwarder, payload, node.address)
-            sendBroadcast_INTERSERVER_USRV(Forwarder, payload)
+            sendBroadcast_LOCAL_USRV(Forwarder, payload).then()
+            sendBroadcast_EXTERNAL_USRV(Forwarder, payload, node.address).then()
+            sendBroadcast_INTERSERVER_USRV(Forwarder, payload).then()
           break;
           case 'INTERSERVER':
-            sendBroadcast_LOCAL_USRV(Forwarder, payload)
-            sendBroadcast_EXTERNAL_USRV(Forwarder, payload)
+            sendBroadcast_LOCAL_USRV(Forwarder, payload).then()
+            sendBroadcast_EXTERNAL_USRV(Forwarder, payload).then()
           break;
         }
     }
