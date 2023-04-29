@@ -1,4 +1,4 @@
-import { createSocket, Socket, AddressInfo } from "dgram";
+import { createSocket, AddressInfo } from "dgram";
 import {
   lookup6,
   ForwarderType,
@@ -122,7 +122,7 @@ function onPing(rinfo: AddressInfo, msg: Buffer) {
 
 function sendToRaw(addr: AddressInfo, msg: Buffer) {
   const { address, port } = addr;
-  server.send(msg, port, address, (error, bytes) => {
+  server.send(msg, port, address, (error) => {
     if (error) {
       manager.delete(addr);
     }
@@ -196,11 +196,11 @@ export async function sendBroadcast_EXTERNAL_USRV(
   if (except !== undefined) {
     const AddressInfo = str2addr(except);
     for (let peer of manager.all(AddressInfo)) {
-      sendTo_EXTERNAL_USRV(peer.AddressInfo, type, payload);
+      sendTo_EXTERNAL_USRV(peer.AddressInfo, type, payload).then();
     }
   } else {
     for (let peer of manager.all()) {
-      sendTo_EXTERNAL_USRV(peer.AddressInfo, type, payload);
+      sendTo_EXTERNAL_USRV(peer.AddressInfo, type, payload).then();
     }
   }
 }

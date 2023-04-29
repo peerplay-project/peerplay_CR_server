@@ -104,7 +104,7 @@ const verifyAccessPort = async (
   try {
     server.listen(args.port, "0.0.0.0");
     const response = await axios.get(
-      `http://${args.ip}:${args.port + args.range}`
+      `https://${args.ip}:${args.port + args.range}`
     );
     if (response.status === 504) {
       const title = chalk.red.underline(task.title + " [FATAL_ERROR]");
