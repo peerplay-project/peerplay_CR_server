@@ -1,0 +1,5 @@
+{
+  "watch": ["src"],
+  "ext": "*.ts,*.yaml",
+  "exec": "tsc -p .&& copyfiles \"src/networks/apis/**/*.yaml\" dist --parents --up 1 && node dist/peerplay_cr_server.js --uuid 0 --minimal_port_range 0 --open_external_server false --custom_database_list [] --database_password test"
+}

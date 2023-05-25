@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Peerplay CR Server - Public Router API
+  version: 1.0.0
+  description: Public API for Peerplay CR Server (Accessible over Internet)
+servers:
+  - url: http://localhost:5985
+    description: Local server
+tags:
+  - name: Swagger
+    description: Open Swagger UI Documentation
+  - name: Authentication
+    description: Manage Authentication
+  - name: /network/general
+    description: Get and manage general network settings
+  - name: /console/ip_settings
+    description: Get and manage general console ip settings
+paths:
+  /swagger:
+    get:
+      summary: Get Swagger UI
+      description: Returns the Swagger UI for the public router API.
+      tags:
+        - Swagger
+      responses:
+        "200":
+          description: Success
+  /auth/register:
+    post:
+      summary: User registration
+      description: Registers a new user.
+      tags:
+        - Authentication
+      parameters:
+        - in: query
+          name: username
+          description: Username of the user to register.
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: email
+          description: Email of the user to register.
+          schema:
+            type: string
+            format: email
+          required: true
+        - in: query
+          name: password
+          description: Password of the user to register.
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: confirmPassword
+          description: Confirm password of the user to register.
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /auth/login:
+    post:
+      summary: User login
+      description: Authenticates a user and generates a JWT token.
+      tags:
+        - Authentication
+      parameters:
+        - in: query
+          name: email
+          description: Email of the user to login.
+          schema:
+            type: string
+            format: email
+          required: true
+        - in: query
+          name: password
+          description: Password of the user to login.
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /auth/reset_password:
+    post:
+      summary: Reset Password
+      description: Resets the user's password
+      tags:
+        - Authentication
+      parameters:
+        - name: email
+          in: query
+          description: User's email
+          required: true
+          schema:
+            type: string
+        - name: resetKey
+          in: query
+          description: Reset key (Required if oldPassword is not provided)
+          required: false
+          schema:
+            type: string
+        - name: oldPassword
+          in: query
+          description: Old password (Required if resetKey is not provided)
+          required: false
+          schema:
+            type: string
+        - name: newPassword
+          in: query
+          description: New password
+          required: true
+          schema:
+            type: string
+        - name: confirmNewPassword
+          in: query
+          description: Confirm new password
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+  /network/general/status:
+    get:
+      summary: Get Network Status
+      description: Returns the status of the network.
+      tags:
+        - /network/general
+      responses:
+        "200":
+          description: Success
+  /console/ip_settings/get_ip_address:
+    get:
+      summary: Get IP Address
+      description: Returns the IP address of the server.
+      tags:
+        - /console/ip_settings
+      security:
+        - JWT: []
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Your JWT Token is invalid or missing (Use Authorize with a Valid JWT Token)
+        "503":
+          description: Your Position in the P2P Database is out of IP Range (Please contact the creator of the project)
+components:
+  securitySchemes:
+    JWT:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
