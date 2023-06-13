@@ -9,6 +9,7 @@ import {
 import { isString } from "util";
 import { SLP_ROUTER } from "../routers/default";
 import { NodesTable } from "../../../../databases/DB_nodes/main";
+import dns from 'dns';
 import {
   PEERPLAY_HEADER,
   DASH,
@@ -17,11 +18,8 @@ import {
   POOL,
   NETWORK_TYPE,
   CONNECT_TYPE,
-  setActiveInterface,
-  strict_mode,
   start_interface_syncronisation
 } from "../../network";
-import { exec, fork } from "child_process";
 const PouchDB = require("pouchdb");
 const net = require("net");
 let database = new PouchDB("DB_nodes");
@@ -145,7 +143,7 @@ function parseHead(msg: Buffer): {
   };
 }
 
-function sendToRaw(
+async function sendToRaw(
   addr: {
     address: string;
     port: number;
@@ -154,23 +152,19 @@ function sendToRaw(
   send_msg: Buffer
 ) {
   let { address, port } = addr;
-  const patched_address = convertIP(address);
-  if (net.isIPv6(<string>patched_address) && port !== undefined) {
+  const patched_address = await convertIP(address);
+  if ( patched_address !== undefined && net.isIPv6(patched_address) && port !== undefined) {
     //console.log("Packet to Send");
     // Send Data
     const send_header = Buffer.alloc(2);
     const send_filter = Buffer.concat([PEERPLAY_HEADER, NETWORK_TYPE,CONNECT_TYPE, DASH, PASSWORD, SLASH, POOL]);
     send_header.writeUInt16BE(server_port, 0);
-    const send_responsePort = send_header.readUInt16BE(0).toString();
     const send_peer_msg = Buffer.concat([send_header,send_filter, send_msg]);
     //console.log("Header : " + send_header.readUInt16BE(0).toString())
     //console.log("Peer Message : " + send_peer_msg.toJSON().data);
     //console.log("Original Message : " + send_msg.toJSON().data);
     // ==========
     // Calculate Received Packet
-    // Extract Header
-    const header = send_peer_msg.slice(0,2);
-    const responsePort = header.readUInt16BE(0);
     // Extract Filter
     const filter = send_peer_msg.slice(2,92);
     const networkType = filter.slice(9, 12).toString(); // NETWORK_TYPE est entre 9 et 12
@@ -354,24 +348,47 @@ export function clearExpire_INTERSERVER_USRV() {
   manager.clearExpire();
 }
 
-function convertIP(ip: string) {
-  console.log("Finding IP type")
-  if (net.isIPv4(ip)) {
-    // Address is at IPv4 format
-    //console.log("IP is On IPv4 format, converting to IPv6")
-    //console.log(ip)
-    const ipv6 = "::ffff:" + ip
-    //console.log("IP converted to IPv6")
-    //console.log(ipv6)
-    return ipv6;
-  } else if (net.isIPv6(ip)) {
-    // Address is at IPv6 format
-    //console.log("IP is already on IPv6 format, Returning IP")
-    //console.log(ip)
-    return ip;
-  } else {
-    // Address is not on IPv4 or IPv6 format
-    //console.log("IP is not on IPv4 or IPv6 format, Returning undefined")
-    return undefined;
-  }
+async function convertIP(ip: string): Promise<string | undefined> {
+  return new Promise((resolve, reject) => {
+    console.log("Finding IP type");
+    if (net.isIP(ip) === 4) {
+      // Address is in IPv4 format
+      const ipv6 = "::ffff:" + ip;
+      console.log("IP is in IPv4 format, converting to IPv6");
+      console.log(ip);
+      console.log("IP converted to IPv6");
+      console.log(ipv6);
+      resolve(ipv6);
+    } else if (net.isIP(ip) === 6) {
+      // Address is in IPv6 format
+      console.log("IP is already in IPv6 format, Returning IP");
+      console.log(ip);
+      resolve(ip);
+    } else {
+      // Address is not in IPv4 or IPv6 format, assuming it is a domain name
+      console.log("IP is not in IPv4 or IPv6 format, Performing DNS lookup");
+
+      dns.lookup(ip, (err, address) => {
+        if (err) {
+          console.log('DNS lookup error:', err);
+          reject(err);
+        } else {
+          console.log("DNS lookup successful");
+          console.log("Resolved IP:", address);
+          if (net.isIP(address) === 4) {
+            const ipv6 = "::ffff:" + address;
+            console.log("Resolved IP is in IPv4 format, converting to IPv6");
+            console.log(ipv6);
+            resolve(ipv6);
+          } else if (net.isIP(address) === 6) {
+            console.log("Resolved IP is already in IPv6 format");
+            resolve(address);
+          } else {
+            console.log("Resolved IP is not in IPv4 or IPv6 format");
+            reject(new Error("Resolved IP is not in IPv4 or IPv6 format"));
+          }
+        }
+      });
+    }
+  });
 }
