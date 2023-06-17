@@ -34,7 +34,7 @@ export function setJwtSecret(newSecret: string) {
   JWT_SECRET = newSecret;
 }
 
-export function ip_calculator(position: number, firstIP: string, lastIP: string, subnetMask: string): string|undefined {
+export function ip_calculator_from_position(position: number, firstIP: string, lastIP: string, subnetMask: string): string|undefined {
   const firstIPParts = firstIP.split('.').map(Number);
   const lastIPParts = lastIP.split('.').map(Number);
   const subnetMaskParts = subnetMask.split('.').map(Number);
@@ -56,4 +56,13 @@ export function ip_calculator(position: number, firstIP: string, lastIP: string,
     .map((part, index) => (subnetMaskParts[index] === 255) ? '' : part.toString())
     .filter(part => part !== '') // Retirer les parties vides
     .join('.');
+}
+
+export function ip_calculator_from_ip(ip: string, subnetMask: string): string {
+  const ipParts = ip.split('.').map(Number);
+  const subnetMaskParts = subnetMask.split('.').map(Number);
+
+  const dynamicIPParts = ipParts.map((part, index) => part & ~subnetMaskParts[index]);
+
+  return dynamicIPParts.slice(1).join('.');
 }

@@ -4,8 +4,7 @@ import {
   get_server_info,
   get_server_size,
   get_router_log,
-  change_filter_settings,
-  get_filter_settings
+  change_filter_settings
 } from '../public/network'
 import { koaSwagger } from 'koa2-swagger-ui';
 import yamljs  from 'yamljs';
@@ -141,7 +140,7 @@ export class PrivateRouter {
     ctx.type = 'application/json'
     ctx.body = {
       message: 'success',
-      output: get_filter_settings()
+      output: "get_filter_settings()"
     }
 
   }
@@ -243,7 +242,7 @@ export class PrivateRouter {
           filter_settings_error = "Invalid Method"
       }
       if (filter_settings_processed){
-      change_filter_settings(method, filter_settings.network_type, filter_settings.password, "", filter_settings.strict_mode)
+      //change_filter_settings(method, filter_settings.network_type, filter_settings.password, "", filter_settings.strict_mode)
       ctx.status= 200
       ctx.type = 'application/json'
       ctx.body = {

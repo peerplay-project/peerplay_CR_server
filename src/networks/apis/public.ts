@@ -5,7 +5,7 @@ import {get_server_info, get_server_size} from "../public/network";
 import {parseToken} from "../../databases/DB_accounts/main";
 import Koa from "koa";
 import {INDEX_accounts_get_position} from "../../databases/indexes/accounts/main";
-import {ip_calculator} from "../toolkit";
+import {ip_calculator_from_position} from "../toolkit";
 const unprotectedRoutes = [
   '/network/general/status',
   '/swagger',
@@ -126,7 +126,7 @@ export class PublicRouter {
     }
   }
   private async handleGetIpAddress(ctx: IRouterContext) {
-    const ip_identifier = ip_calculator(await INDEX_accounts_get_position(ctx.state.user_uuid), "1.0.1.0", "1.0.255.254", "255.0.0.0")
+    const ip_identifier = ip_calculator_from_position(await INDEX_accounts_get_position(ctx.state.user_uuid), "1.0.1.0", "1.0.255.254", "255.0.0.0")
     if (ip_identifier !== undefined){
       ctx.status = 200
       ctx.type = 'application/json'

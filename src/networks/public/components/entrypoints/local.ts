@@ -4,10 +4,11 @@ import {
   ForwarderTypeMap,
   Timeout,
   lookup6,
+  ip_calculator_from_position,
+  ip_calculator_from_ip,
 } from "../../../toolkit";
 import { isString } from "util";
 import { SLP_ROUTER } from "../routers/default";
-
 // Default Filter Settings
 const PEERPLAY_HEADER = Buffer.alloc(9); // buffer de taille 9
 PEERPLAY_HEADER.write("peerplay:");
@@ -55,11 +56,14 @@ class FilterManager {
         return new Filter(default_filter);
     }
   }
-  find(ip_address: string,): string | undefined{
+  find(ip_address: string,): {source: string, filter: Buffer} | undefined{
     const map = this.map;
     const filterData: Filter | undefined = map.get(ip_address);
     if (filterData !== undefined) {
-      return "LOCAL"
+      return {
+        source: "LOCAL",
+        filter: filterData.Filter,
+      }
     }
     else
     {
@@ -199,7 +203,6 @@ function sendToRaw(addr: AddressInfo, msg: Buffer) {
 }
 
 function onPacket(peer: AddressInfo, type: ForwarderType, payload: Buffer) {
-  let source_ip: string;
   let SOURCE_IP_BUFFER: Buffer;
   let ip_filter: Buffer;
   switch (type) {
@@ -208,8 +211,7 @@ function onPacket(peer: AddressInfo, type: ForwarderType, payload: Buffer) {
     case ForwarderType.Ipv4:
       const IPV4_OFF_SRC = 12;
       SOURCE_IP_BUFFER = payload.slice(IPV4_OFF_SRC, IPV4_OFF_SRC + 32);
-      source_ip = `${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`
-      ip_filter = filter.get(source_ip ).Filter
+      ip_filter = filter.get(ip_calculator_from_ip(`${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`,'255.0.0.0')).Filter
       SLP_ROUTER(
         { node_type: "LOCAL", address: addr2str(peer) },
         ip_filter,
@@ -220,8 +222,7 @@ function onPacket(peer: AddressInfo, type: ForwarderType, payload: Buffer) {
     case ForwarderType.Ipv4Frag:
       const IPV4_FRAG_OFF_SRC = 0;
       SOURCE_IP_BUFFER = payload.slice(IPV4_FRAG_OFF_SRC, IPV4_FRAG_OFF_SRC + 32);
-      source_ip = `${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`
-      ip_filter = filter.get(source_ip).Filter
+      ip_filter = filter.get(ip_calculator_from_ip(`${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`,'255.0.0.0')).Filter
       SLP_ROUTER(
         { node_type: "LOCAL", address: addr2str(peer) },
         ip_filter,

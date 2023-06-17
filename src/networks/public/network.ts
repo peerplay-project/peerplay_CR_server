@@ -3,8 +3,6 @@ import { clearExpire_EXTERNAL_USRV, getClientSize_EXTERNAL_USRV, start_EXTERNAL_
 import { clearExpire_LOCAL_USRV, getClientSize_LOCAL_USRV, start_LOCAL_USRV} from "./components/entrypoints/local";
 import { clearExpire_INTERSERVER_USRV, getClientSize_INTERSERVER_USRV, start_INTERSERVER_USRV } from "./components/entrypoints/interserver";
 import {PeerplayData} from "../../interface";
-import ora from "ora-classic";
-const network = require('network');
 let server_info = {
   address: "",
   local: 0,
@@ -14,36 +12,6 @@ let server_info = {
   external_internet: 0,
   minimal_port_range: 0
 };
-
-// Interserver Password is Used for Filter Interserver Packet for Create Sub Network
-// peerplay:<network_type>-<password>
-// <network_type> :
-// - ANY : Accept All Network Type (Optical Fiber / ADSL / Mobile (4G, 5G)
-// - NT1 : Accept Only Optical Fiber Network
-// - NT2 : Accept Only ADSL Network
-// - NT3 : Accept Only Mobile Network (4G, 5G)
-// <password> : Password for Filter Packet (Use a Global or Private Password)
-// = Global Network Password
-// - WORLD : Accept All Packet
-// - US : Accept Only Packet from United States
-// - EU : Accept Only Packet from Europe
-// - AS : Accept Only Packet from Asia
-//Peerplay Send and Recieve Buffers
-export const PEERPLAY_HEADER = Buffer.alloc(9); // buffer de taille 9
-PEERPLAY_HEADER.write("peerplay:");
-export const NETWORK_TYPE = Buffer.alloc(3); // buffer de taille 3
-NETWORK_TYPE.write("ANY");
-export const CONNECT_TYPE = Buffer.alloc(4); // buffer de taille 3
-CONNECT_TYPE.write("ANY");
-export let strict_mode = false
-export const DASH = Buffer.alloc(1); // buffer de taille 1
-DASH.write("-");
-export const PASSWORD = Buffer.alloc(36); // buffer de taille 36
-PASSWORD.write("WORLD");
-export const SLASH = Buffer.alloc(1); // buffer de taille 1
-SLASH.write("/");
-export const POOL = Buffer.alloc(36); // buffer de taille 36
-POOL.fill("");
 
 // Console Types is Used for Calculate Total Client Size
 const console_types = 7
@@ -103,87 +71,37 @@ export function get_router_log(){
 }
 
 export function change_filter_settings(
+  ip_address: string,
+  ip_filter: Buffer,
   method: string,
   network_type: string,
   password: string,
   pool: string,
   strict: boolean
 ) {
+  // Actual Buffers
+  const NETWORK_TYPE = ip_filter.slice(9, 12) // NETWORK_TYPE est entre 9 et 12
+  const CONNECT_TYPE = ip_filter.slice(12, 16) // CONNECT_TYPE est entre 13 et 16 et on enlève les zéros
+  const PASSWORD = ip_filter.slice(17, 53)// PASSWORD est entre 13 et 52 et on enlève les zéros
+  const POOL = ip_filter.slice(54, 90) // POOL est entre 52 et 90 et on enlève les zéros
   switch (method) {
     case "NETWORK_TYPE":
       // Empty and Write Network Type Settings
       NETWORK_TYPE.fill(0);
       NETWORK_TYPE.write(network_type.slice(0, 3));
-      return true;
       break;
     case "GEOGRAPHIC_KEY":
       PASSWORD.fill(0);
       PASSWORD.write(password.slice(0, 36));
-      return true;
       break;
     case "PASSWORD_KEY":
       PASSWORD.fill(0);
       PASSWORD.write(password.slice(0, 36));
-      return true;
       break;
     case "POOL_KEY":
       POOL.fill(0);
       POOL.write(pool.slice(0, 36));
-      return true;
-      break;
-    case "STRICT_MODE":
-      strict_mode = strict
-      return true;
       break;
   }
   return true;
-}
-
-export async function start_interface_syncronisation() {
-  while (true)  {
-    await setActiveInterface()
-    await new Promise((resolve) =>
-      setTimeout(resolve, 5 * 1000)
-    );
-  }
-}
-export function getActiveInterfaceType() {
-  return new Promise((resolve, reject) => {
-    network.get_active_interface((err: any, obj: unknown) => {
-      if (err) {
-        reject(err);
-      } else {
-        // @ts-ignore
-        resolve(obj.type);
-      }
-    });
-  });
-}
-export async function setActiveInterface() {
-  if (strict_mode === false) {
-    CONNECT_TYPE.fill(0);
-    CONNECT_TYPE.write("ANY");
-    return null
-  } else {
-  const active_interface = await getActiveInterfaceType();
-  if (active_interface === "Wired") {
-    CONNECT_TYPE.fill(0);
-    CONNECT_TYPE.write("ETH");
-  } else if (active_interface === "Wireless") {
-    CONNECT_TYPE.fill(0);
-    CONNECT_TYPE.write("WLAN");
-  } else {
-    // DO NOTHING
-  }
-  return null
-  }
-}
-
-export function get_filter_settings() {
-  return {
-    network_type: NETWORK_TYPE.toString(),
-    password: PASSWORD.toString().split('\0')[0],
-    pool: POOL.toString().split('\0')[0],
-    strict_mode: strict_mode
-  };
 }
