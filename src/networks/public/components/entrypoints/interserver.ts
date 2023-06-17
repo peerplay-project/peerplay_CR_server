@@ -10,16 +10,6 @@ import { isString } from "util";
 import { SLP_ROUTER } from "../routers/default";
 import { NodesTable } from "../../../../databases/DB_nodes/main";
 import dns from 'dns';
-import {
-  PEERPLAY_HEADER,
-  DASH,
-  SLASH,
-  PASSWORD,
-  POOL,
-  NETWORK_TYPE,
-  CONNECT_TYPE,
-  start_interface_syncronisation
-} from "../../network";
 const PouchDB = require("pouchdb");
 const net = require("net");
 let database = new PouchDB("DB_nodes");
@@ -149,51 +139,32 @@ async function sendToRaw(
     port: number;
     family: string;
   },
-  send_msg: Buffer
+  send_msg: Buffer,
+  send_filter: Buffer
 ) {
   let { address, port } = addr;
   const patched_address = await convertIP(address);
-  if ( patched_address !== undefined && net.isIPv6(patched_address) && port !== undefined) {
-    //console.log("Packet to Send");
-    // Send Data
+  if (patched_address !== undefined && net.isIPv6(patched_address) && port !== undefined) {
     const send_header = Buffer.alloc(2);
-    const send_filter = Buffer.concat([PEERPLAY_HEADER, NETWORK_TYPE,CONNECT_TYPE, DASH, PASSWORD, SLASH, POOL]);
     send_header.writeUInt16BE(server_port, 0);
-    const send_peer_msg = Buffer.concat([send_header,send_filter, send_msg]);
-    //console.log("Header : " + send_header.readUInt16BE(0).toString())
-    //console.log("Peer Message : " + send_peer_msg.toJSON().data);
-    //console.log("Original Message : " + send_msg.toJSON().data);
-    // ==========
-    // Calculate Received Packet
-    // Extract Filter
-    const filter = send_peer_msg.slice(2,92);
-    const networkType = filter.slice(9, 12).toString(); // NETWORK_TYPE est entre 9 et 12
-    const connectType = filter.slice(12, 16).toString().split('\0')[0]; // CONNECT_TYPE est entre 13 et 16 et on enlève les zéros
-    const password = filter.slice(17,53).toString().split('\0')[0]; // PASSWORD est entre 13 et 52 et on enlève les zéros
-    const pool = filter.slice(54, 90).toString().split('\0')[0]; // POOL est entre 52 et 90 et on enlève les zéros
-    console.log("Network Type: '" + networkType +"-"+ connectType + "' | Password: '" + password + "' | Pool: '" + pool + "'");
-    if (networkType === NETWORK_TYPE.slice(0, 3).toString() && connectType === CONNECT_TYPE.slice(0, 4).toString().split('\0')[0] && password === PASSWORD.slice(0, 36).toString().split('\0')[0] && pool === POOL.slice(0, 36).toString().split('\0')[0] && JSON.stringify(send_msg.toJSON()) === JSON.stringify(send_peer_msg.slice(92)))
-    {
-      server.send(send_peer_msg, 0, send_peer_msg.length, port, patched_address, (error, bytes) => {
-        if (error) {
-          manager.delete(addr);
-          console.log(`Error in packet send` + error);
-        } else {
-          console.log("Packet Send");
-        }
-      });
-  }else {
-      console.log("Invalid Network Type or Password, or damaged packet : Abort Send");}
-    }
-  else
-  {
-    //console.log(`Invalid Destination Address :` + patched_address);
+    const send_peer_msg = Buffer.concat([send_header, send_filter, send_msg]);
+    server.send(send_peer_msg, 0, send_peer_msg.length, port, patched_address, (error, bytes) => {
+      if (error) {
+        manager.delete(addr);
+        console.log(`Error in packet send` + error);
+      } else {
+        console.log("Packet Send");
+      }
+    });
+  } else {
+    console.log("Invalid Network Type or Password, or damaged packet : Abort Send");
   }
 }
 
 function onPacket(
   peer: AddressInfo,
   type: ForwarderType,
+  filter: Buffer,
   payload: Buffer
 ) {
   console.log("Packet Received for processing");
@@ -205,6 +176,7 @@ function onPacket(
       console.log("IPV4 Packet Recieved: Send to Router");
       SLP_ROUTER(
         { node_type: "INTERSERVER", address: addr2str(peer) },
+        filter,
         payload,
         false
       );
@@ -213,6 +185,7 @@ function onPacket(
       console.log("IPV4 Fragment Packet Recieved: Send to Router");
       SLP_ROUTER(
         { node_type: "INTERSERVER", address: addr2str(peer) },
+        filter,
         payload,
         true
       );
@@ -223,33 +196,20 @@ function onPacket(
 async function onMessage(peer_msg: Buffer, rinfo: AddressInfo): Promise<void> {
   //console.log("Message Received");
   // Extract Header
-  const header = peer_msg.slice(0,2);
+  const header = peer_msg.slice(0, 2);
   const responsePort = header.readUInt16BE(0);
   // Extract Filter
-  const filter = peer_msg.slice(2,92);
-  const networkType = filter.slice(9, 12).toString(); // NETWORK_TYPE est entre 9 et 12
-  const connectType = filter.slice(12, 16).toString().split('\0')[0]; // CONNECT_TYPE est entre 13 et 16 et on enlève les zéros
-  const password = filter.slice(17,53).toString().split('\0')[0]; // PASSWORD est entre 13 et 52 et on enlève les zéros
-  const pool = filter.slice(54, 90).toString().split('\0')[0]; // POOL est entre 52 et 90 et on enlève les zéros
-  console.log("Network Type: '" + networkType +"-"+ connectType + "' | Password: '" + password + "' | Pool: '" + pool + "'");
-  if (networkType === NETWORK_TYPE.slice(0, 3).toString() && connectType === CONNECT_TYPE.slice(0, 4).toString().split('\0')[0] && password === PASSWORD.slice(0, 36).toString().split('\0')[0] && pool === POOL.slice(0, 36).toString().split('\0')[0])
-  {
-    const msg = peer_msg.slice(92);
-    if (msg.byteLength === 0) {
-      return;
-    }
-    const { type } = parseHead(msg);
-    const AddressInfo: AddressInfo = {address:rinfo.address, port:responsePort, family: rinfo.family}
-    const peer = manager.get(AddressInfo);
-    let payload = Buffer.from(msg).slice(1);
-    console.log("Packet extracted and send to packet processor");
-    onPacket(peer.AddressInfo, type, payload);
+  const filter = peer_msg.slice(2, 92);
+  const msg = peer_msg.slice(92);
+  if (msg.byteLength === 0) {
+    return;
   }
-  else
-  {
-    console.log("Network Type or Password Mismatch : Ignore Packet");
-  }
-
+  const { type } = parseHead(msg);
+  const AddressInfo: AddressInfo = { address: rinfo.address, port: responsePort, family: rinfo.family }
+  const peer = manager.get(AddressInfo);
+  let payload = Buffer.from(msg).slice(1);
+  console.log("Packet extracted and send to packet processor");
+  onPacket(peer.AddressInfo, type, filter, payload);
 }
 
 export function start_INTERSERVER_USRV(
@@ -263,7 +223,6 @@ export function start_INTERSERVER_USRV(
   server_port = internet_port;
   db_password = database_password;
   server.bind(port);
-  start_interface_syncronisation()
 }
 
 export async function sendTo_INTERSERVER_USRV({
@@ -272,26 +231,28 @@ export async function sendTo_INTERSERVER_USRV({
   payload,
 }: {
   address:
-    | string
-    | {
-        address: string;
-        port: number;
-        family: string;
-      };
+  | string
+  | {
+    address: string;
+    port: number;
+    family: string;
+  };
   type: ForwarderType;
   payload: Buffer;
 
-}) {
+}, source_filter: Buffer) {
   if (isString(address)) {
     const AddressInfo = str2addr(address);
     sendToRaw(
       AddressInfo,
-      Buffer.concat([ForwarderTypeMap[type], payload], payload.byteLength + 1)
+      Buffer.concat([ForwarderTypeMap[type], payload], payload.byteLength + 1),
+      source_filter
     );
   } else {
     sendToRaw(
       address,
-      Buffer.concat([ForwarderTypeMap[type], payload], payload.byteLength + 1)
+      Buffer.concat([ForwarderTypeMap[type], payload], payload.byteLength + 1),
+      source_filter
     );
   }
 
@@ -319,6 +280,8 @@ export async function sendBroadcast_INTERSERVER_USRV(
               ncryptObject.decrypt(node.address) !== server_ip &&
               node.interserver_port !== server_port
             ) {
+              const emptyFilter = Buffer.alloc(90);
+              emptyFilter.fill(0);
               sendTo_INTERSERVER_USRV({
                 address: {
                   address: ncryptObject.decrypt(node.address),
@@ -327,7 +290,8 @@ export async function sendBroadcast_INTERSERVER_USRV(
                 },
                 type,
                 payload,
-              });
+              },
+                emptyFilter);
             }
           }
         } catch (error) {
