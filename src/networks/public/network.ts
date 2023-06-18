@@ -70,38 +70,3 @@ export function get_router_log(){
   return export_router_log()
 }
 
-export function change_filter_settings(
-  ip_address: string,
-  ip_filter: Buffer,
-  method: string,
-  network_type: string,
-  password: string,
-  pool: string,
-  strict: boolean
-) {
-  // Actual Buffers
-  const NETWORK_TYPE = ip_filter.slice(9, 12) // NETWORK_TYPE est entre 9 et 12
-  const CONNECT_TYPE = ip_filter.slice(12, 16) // CONNECT_TYPE est entre 13 et 16 et on enlève les zéros
-  const PASSWORD = ip_filter.slice(17, 53)// PASSWORD est entre 13 et 52 et on enlève les zéros
-  const POOL = ip_filter.slice(54, 90) // POOL est entre 52 et 90 et on enlève les zéros
-  switch (method) {
-    case "NETWORK_TYPE":
-      // Empty and Write Network Type Settings
-      NETWORK_TYPE.fill(0);
-      NETWORK_TYPE.write(network_type.slice(0, 3));
-      break;
-    case "GEOGRAPHIC_KEY":
-      PASSWORD.fill(0);
-      PASSWORD.write(password.slice(0, 36));
-      break;
-    case "PASSWORD_KEY":
-      PASSWORD.fill(0);
-      PASSWORD.write(password.slice(0, 36));
-      break;
-    case "POOL_KEY":
-      POOL.fill(0);
-      POOL.write(pool.slice(0, 36));
-      break;
-  }
-  return true;
-}

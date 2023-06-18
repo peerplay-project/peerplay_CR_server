@@ -24,7 +24,7 @@ const SLASH = Buffer.alloc(1); // buffer de taille 1
 SLASH.write("/");
 const POOL = Buffer.alloc(36); // buffer de taille 36
 POOL.fill("");
-const default_filter = Buffer.concat([PEERPLAY_HEADER, NETWORK_TYPE,CONNECT_TYPE, DASH, PASSWORD, SLASH, POOL]);
+const default_filter = Buffer.concat([PEERPLAY_HEADER, NETWORK_TYPE, CONNECT_TYPE, DASH, PASSWORD, SLASH, POOL]);
 
 class Filter {
   Filter: Buffer;
@@ -40,41 +40,38 @@ class FilterManager {
       Filter: Buffer;
     }
   > = new Map();
-  delete(ip_address: string) {
-    return this.map.delete(ip_address);
+  delete(ip_identifier: string) {
+    return this.map.delete(ip_identifier);
   }
-  get(ip_address: string): Filter {
+  get(ip_identifier: string): Filter {
     const map = this.map;
-    const filterData: Filter | undefined = map.get(ip_address);
+    const filterData: Filter | undefined = map.get(ip_identifier);
     if (filterData !== undefined) {
       return filterData;
     }
-    else
-    
-      {
-        map.set(ip_address, new Filter(default_filter));
-        return new Filter(default_filter);
+    else {
+      map.set(ip_identifier, new Filter(default_filter));
+      return new Filter(default_filter);
     }
   }
-  find(ip_address: string,): {source: string, filter: Buffer} | undefined{
+  find(ip_identifier: string,): { source: string, filter: Buffer } | undefined {
     const map = this.map;
-    const filterData: Filter | undefined = map.get(ip_address);
+    const filterData: Filter | undefined = map.get(ip_identifier);
     if (filterData !== undefined) {
       return {
         source: "LOCAL",
         filter: filterData.Filter,
       }
     }
-    else
-    {
+    else {
       return undefined
     }
   }
-  set(ip_address: string, new_filter: Buffer) {
+  set(ip_identifier: string, new_filter: Buffer) {
     // Set New Filter
     const map = this.map;
-    map.set(ip_address, new Filter(new_filter));
-    if (map.get(ip_address)?.Filter === new_filter) {
+    map.set(ip_identifier, new Filter(new_filter));
+    if (map.get(ip_identifier)?.Filter === new_filter) {
       return true;
     }
   }
@@ -211,7 +208,7 @@ function onPacket(peer: AddressInfo, type: ForwarderType, payload: Buffer) {
     case ForwarderType.Ipv4:
       const IPV4_OFF_SRC = 12;
       SOURCE_IP_BUFFER = payload.slice(IPV4_OFF_SRC, IPV4_OFF_SRC + 32);
-      ip_filter = filter.get(ip_calculator_from_ip(`${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`,'255.0.0.0')).Filter
+      ip_filter = filter.get(ip_calculator_from_ip(`${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`, '255.0.0.0')).Filter
       SLP_ROUTER(
         { node_type: "LOCAL", address: addr2str(peer) },
         ip_filter,
@@ -222,7 +219,7 @@ function onPacket(peer: AddressInfo, type: ForwarderType, payload: Buffer) {
     case ForwarderType.Ipv4Frag:
       const IPV4_FRAG_OFF_SRC = 0;
       SOURCE_IP_BUFFER = payload.slice(IPV4_FRAG_OFF_SRC, IPV4_FRAG_OFF_SRC + 32);
-      ip_filter = filter.get(ip_calculator_from_ip(`${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`,'255.0.0.0')).Filter
+      ip_filter = filter.get(ip_calculator_from_ip(`${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`, '255.0.0.0')).Filter
       SLP_ROUTER(
         { node_type: "LOCAL", address: addr2str(peer) },
         ip_filter,
@@ -287,18 +284,15 @@ export async function sendBroadcast_LOCAL_USRV(
     }
   }
 }
-export function getClientFilter_LOCAL_USRV(ip_address: string)
-{
-  return filter.get(ip_address).Filter
+export function getClientFilter_LOCAL_USRV(ip_identifier: string) {
+  return filter.get(ip_identifier).Filter
 }
-export function findClientFilter_LOCAL_USRV(ip_address: string)
-{
-  return filter.find(ip_address)
+export function findClientFilter_LOCAL_USRV(ip_identifier: string) {
+  return filter.find(ip_identifier)
 }
-export function setClientFilter_LOCAL_USRV(ip_address: string, new_filter: Buffer)
-{
-  if (filter.find(ip_address) !== undefined){
-    return filter.set(ip_address, new_filter)
+export function setClientFilter_LOCAL_USRV(ip_identifier: string, new_filter: Buffer) {
+  if (filter.find(ip_identifier) !== undefined) {
+    return filter.set(ip_identifier, new_filter)
   }
 }
 export function getClientSize_LOCAL_USRV() {

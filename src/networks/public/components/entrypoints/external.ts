@@ -40,38 +40,40 @@ class FilterManager {
       Filter: Buffer;
     }
   > = new Map();
-  delete(ip_address: string) {
-    return this.map.delete(ip_address);
+  delete(ip_identifier: string) {
+    return this.map.delete(ip_identifier);
   }
-  get(ip_address: string): Filter {
+  get(ip_identifier: string): Filter {
     const map = this.map;
-    const filterData: Filter | undefined = map.get(ip_address);
+    const filterData: Filter | undefined = map.get(ip_identifier);
     if (filterData !== undefined) {
       return filterData;
     }
-    else
-    {
-      map.set(ip_address, new Filter(default_filter));
+    else {
+      map.set(ip_identifier, new Filter(default_filter));
       return new Filter(default_filter);
     }
   }
-  find(ip_address: string,): {source: string, filter: Buffer} | undefined{
+  find(ip_identifier: string,): { source: string, filter: Buffer } | undefined {
     const map = this.map;
-    const filterData: Filter | undefined = map.get(ip_address);
+    const filterData: Filter | undefined = map.get(ip_identifier);
     if (filterData !== undefined) {
       return {
-        source: "LOCAL",
+        source: "EXTERNAL",
         filter: filterData.Filter,
       }
     }
-    else
-    {
+    else {
       return undefined
     }
   }
-  set(ip_address: string, new_filter: Buffer) {
+  set(ip_identifier: string, new_filter: Buffer) {
+    // Set New Filter
     const map = this.map;
-    map.set(ip_address, new Filter(new_filter));
+    map.set(ip_identifier, new Filter(new_filter));
+    if (map.get(ip_identifier)?.Filter === new_filter) {
+      return true;
+    }
   }
 }
 
@@ -283,18 +285,18 @@ export async function sendBroadcast_EXTERNAL_USRV(
   }
 }
 
-export function getClientFilter_EXTERNAL_USRV(ip_address: string)
+export function getClientFilter_EXTERNAL_USRV(ip_identifier: string)
 {
-  return filter.get(ip_address).Filter
+  return filter.get(ip_identifier).Filter
 }
-export function findClientFilter_EXTERNAL_USRV(ip_address: string)
+export function findClientFilter_EXTERNAL_USRV(ip_identifier: string)
 {
-  return filter.find(ip_address)
+  return filter.find(ip_identifier)
 }
 
-export function setClientFilter_EXTERNAL_USRV(ip_address: string, new_filter: Buffer)
+export function setClientFilter_EXTERNAL_USRV(ip_identifier: string, new_filter: Buffer)
 {
-  return filter.set(ip_address, new_filter)
+  return filter.set(ip_identifier, new_filter)
 }
 export function getClientSize_EXTERNAL_USRV() {
   return manager.size
