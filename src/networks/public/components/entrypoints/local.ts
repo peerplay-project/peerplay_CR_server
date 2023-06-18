@@ -19,7 +19,7 @@ CONNECT_TYPE.write("ANY");
 const DASH = Buffer.alloc(1); // buffer de taille 1
 DASH.write("-");
 const PASSWORD = Buffer.alloc(36); // buffer de taille 36
-PASSWORD.write("WORLD");
+PASSWORD.write("GEO-WORLD");
 const SLASH = Buffer.alloc(1); // buffer de taille 1
 SLASH.write("/");
 const POOL = Buffer.alloc(36); // buffer de taille 36

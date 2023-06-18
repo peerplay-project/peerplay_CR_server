@@ -223,20 +223,17 @@ paths:
         - JWT: []
       parameters:
         - in: query
-          name: method
-          description: Name of the method to change the NETWORK_TYPE value of the filter settings
+          name: random_password
+          description: This property represents the password_key used for filter the network (used for private / party networks)
           schema:
-            type: string
-            nullable: false
-            default: "NETWORK_KEY"
-            readOnly: true
-          required: true
+            type: boolean
         - in: query
           name: network_key
-          description: This property represents the password_key used for filter the network (used for private / party networks or championships)
+          description: This property represents the password_key used for filter the network (used for private / party networks)
           schema:
             type: string
-            maxLength: 36
+            maxLength: 32
+            allowEmptyValue: true
       responses:
         "200":
           description: Success

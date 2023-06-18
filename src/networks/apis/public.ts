@@ -6,8 +6,9 @@ import { parseToken } from "../../databases/DB_accounts/main";
 import Koa from "koa";
 import { INDEX_accounts_get_position } from "../../databases/indexes/accounts/main";
 import { ip_calculator_from_position } from "../toolkit";
-import { findClientFilter_LOCAL_USRV, setClientFilter_LOCAL_USRV } from 'networks/public/components/entrypoints/local';
-import { findClientFilter_EXTERNAL_USRV, setClientFilter_EXTERNAL_USRV } from 'networks/public/components/entrypoints/external';
+import { findClientFilter_LOCAL_USRV, setClientFilter_LOCAL_USRV } from '../public/components/entrypoints/local';
+import { findClientFilter_EXTERNAL_USRV, setClientFilter_EXTERNAL_USRV } from '../public/components/entrypoints/external';
+import { v4 as uuidv4 } from 'uuid';
 const unprotectedRoutes = [
   '/network/general/status',
   '/swagger',
@@ -107,16 +108,16 @@ export class PublicRouter {
     this.router.get('/console/ip_settings/get_ip_address', async (ctx) => {
       await this.handleGetIpAddress(ctx)
     });
-    this.router.get('/filter/filter_settings', async (ctx) => {
+    this.router.get('/account/filter/filter_settings', async (ctx) => {
       await this.getFilter(ctx)
     });
-    this.router.post('/filter/filter_settings/network_type', async (ctx) => {
+    this.router.post('/account/filter/filter_settings/network_type', async (ctx) => {
       await this.setFilter("NETWORK_TYPE", ctx)
     });
-    this.router.post('/filter/filter_settings/password_key', async (ctx) => {
+    this.router.post('/account/filter/filter_settings/password_key', async (ctx) => {
       await this.setFilter("PASSWORD_KEY", ctx)
     });
-    this.router.post('/filter/filter_settings/geographic_key', async (ctx) => {
+    this.router.post('/account/filter/filter_settings/geographic_key', async (ctx) => {
       await this.setFilter("GEOGRAPHIC_KEY", ctx)
     });
     this.router.all('*', async (ctx, next) => {
@@ -196,7 +197,20 @@ export class PublicRouter {
         ctx.type = 'application/json'
         ctx.body = {
           message: 'success',
-          actual_filter: current_filter.filter.toString()
+          actual_filter: {
+            network_type: current_filter.filter.slice(9, 12).toString(), // NETWORK_TYPE est entre 9 et 12
+            connect_type: current_filter.filter.slice(12, 16).toString().split('\0')[0], // CONNECT_TYPE est entre 13 et 16 et on enlève les zéros
+            password: current_filter.filter.slice(17, 53).toString().split('\0')[0],
+            pool: current_filter.filter.slice(54, 90).toString().split('\0')[0]
+          }
+        }
+      }
+      else
+      {
+        ctx.type = 'application/json'
+        ctx.body = {
+          message: 'error',
+          actual_filter: "NO_FILTER_FOUND"
         }
       }
     }
@@ -217,8 +231,10 @@ export class PublicRouter {
           const CONNECT_TYPE = current_filter.filter.slice(12, 16) // CONNECT_TYPE est entre 13 et 16 et on enlève les zéros
           const PASSWORD = current_filter.filter.slice(17, 53)// PASSWORD est entre 13 et 52 et on enlève les zéros
           const POOL = current_filter.filter.slice(54, 90) // POOL est entre 52 et 90 et on enlève les zéros
+          console.log("Sliced Filter")
           switch (method) {
             case "NETWORK_TYPE":
+              console.log("Selected : NETWORK_TYPE")
               // @ts-ignore
               if (typeof (ctx.request.query.network_type) === "string" && ctx.request.query.network_type !== "" && (ctx.request.query.network_type === "NT1" || ctx.request.query.network_type === "NT2" || ctx.request.query.network_type === "NT3" || ctx.request.query.network_type === "ANY")) {
                 // @ts-ignore
@@ -231,21 +247,27 @@ export class PublicRouter {
               }
               break
             case "GEOGRAPHIC_KEY":
+              console.log("Selected : GEOGRAPHIC_KEY")
               // @ts-ignore
               if (ctx.request.query.geographic_network_type === "WORLD") {
+                console.log("World Selected")
                 PASSWORD.fill(0);
-                PASSWORD.write(ctx.request.query.geographic_network_type.slice(0, 36));
+                PASSWORD.write("GEO-WORLD");
+                filter_settings_processed = true
               }
               else {
                 // @ts-ignore
                 const position = { continent: `${ctx.request.query.continent}`, country: `${ctx.request.query.country}` }
+                console.log("Get Position")
                 if (typeof position.continent === 'string' && typeof position.country === 'string') {
+                  console.log("Position is String Convert to Geocode")
                   const geocode = {
-                    CONTINENTAL: `GEO-${position.continent.toUpperCase()}-${position.country.toUpperCase()}`,
-                    COUNTRY: `GEO-${position.continent.toUpperCase()}`
+                    CONTINENTAL: `GEO-${position.continent.toUpperCase()}`,
+                    COUNTRY: `GEO-${position.continent.toUpperCase()}_${position.country.toUpperCase()}`
                   }
                   // @ts-ignore
                   const selected_geocode = geocode[ctx.request.query.geographic_network_type]
+                  console.log("Selected Geocode")
                   PASSWORD.fill(0);
                   PASSWORD.write(selected_geocode.slice(0, 36));
                   filter_settings_processed = true
@@ -257,22 +279,31 @@ export class PublicRouter {
               break
             case "PASSWORD_KEY":
               // @ts-ignore
-              if (ctx.request.query.network_key !== "" && ctx.request.query.network_key.length <= 32) {
+              console.log(ctx.request.query.network_key)
+              if (ctx.request.query.random_password !== "true" && ctx.request.query.network_key !== undefined && ctx.request.query.network_key.length <= 32) {
+                console.log("set a Custom Password")
                 PASSWORD.fill(0);
+                console.log("Fill Password with 0")
                 // @ts-ignore
-                PASSWORD.write(`PWD-${ctx.request.query.password.slice(0, 32)}`);
+                PASSWORD.write(`PWD-${ctx.request.query.network_key.slice(0, 32)}`);
+                console.log("Write Password")
                 filter_settings_processed = true
+                console.log("Custom Password Set Successfully")
               }
               else {
                 // @ts-ignore
-                if (ctx.request.query.network_key === "") {
+                if (ctx.request.query.random_password === "true") {
+                  console.log("set a Prégenerated Password")
                   PASSWORD.fill(0);
+                  console.log("Fill Password with 0")
                   // @ts-ignore
                   PASSWORD.write(`PWD-${uuidv4().slice(0, 32)}`);
+                  console.log("Write Password")
                   filter_settings_processed = true
+                  console.log("Custom Password Set Successfully")
                 }
                 else {
-                  filter_settings_error = "Missing or Invalid Arguments: if provided : Password must be a string (limited to 32 characters)"
+                  filter_settings_error = "Missing or Invalid Arguments: if you want a custom password : Password must be a string (limited to 32 characters)"
                 }
               }
               break
@@ -280,19 +311,23 @@ export class PublicRouter {
               filter_settings_error = "Invalid Method"
           }
           if (filter_settings_processed) {
+            console.log("Filter Settings Processed Successfully, Encoding Filter")
             let filter_settings_changed = false;
             let data: Buffer | undefined
             let verify: Buffer = Buffer.alloc(90)
+            console.log("Source Calculation")
             switch (current_filter.source) {
               case "LOCAL":
+                console.log("Set a local filter")
                 setClientFilter_LOCAL_USRV(ip_identifier, Buffer.concat([PEERPLAY_HEADER, NETWORK_TYPE, CONNECT_TYPE, DASH, PASSWORD, SLASH, POOL]))
                 data = findClientFilter_LOCAL_USRV(ip_identifier)?.filter
-                if (data !== undefined) {
+                if (data !== undefined){
                   verify = data
                   filter_settings_changed = true
                 }
                 break;
               case "EXTERNAL":
+                console.log("Set a external filter")
                 setClientFilter_EXTERNAL_USRV(ip_identifier, Buffer.concat([PEERPLAY_HEADER, NETWORK_TYPE, CONNECT_TYPE, DASH, PASSWORD, SLASH, POOL]))
                 data = findClientFilter_EXTERNAL_USRV(ip_identifier)?.filter
                 if (data !== undefined) {
@@ -309,7 +344,8 @@ export class PublicRouter {
                 }
                 break;
             }
-            if (filter_settings_changed && verify === Buffer.concat([PEERPLAY_HEADER, NETWORK_TYPE, CONNECT_TYPE, DASH, PASSWORD, SLASH, POOL])) {
+            console.log("Filter Settings Changed, Verifying changes")
+            if (filter_settings_changed && verify.equals(Buffer.concat([PEERPLAY_HEADER, NETWORK_TYPE, CONNECT_TYPE, DASH, PASSWORD, SLASH, POOL]))) {
               ctx.status = 200
               ctx.type = 'application/json'
               ctx.body = {
@@ -343,8 +379,6 @@ export class PublicRouter {
               output: filter_settings_error
             }
           }
-
-
         } catch (error) {
           ctx.type = 'application/json'
           ctx.body = {
