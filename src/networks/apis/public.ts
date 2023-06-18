@@ -357,7 +357,7 @@ export class PublicRouter {
                 ctx.status = 400
                 ctx.type = 'application/json'
                 ctx.body = {
-                  message: 'Error',
+                  status: 'ERROR',
                   output: "Filter Test Failed"
                 }
               }
@@ -365,7 +365,7 @@ export class PublicRouter {
                 ctx.status = 400
                 ctx.type = 'application/json'
                 ctx.body = {
-                  message: 'Error',
+                  status: 'ERROR',
                   output: "Unable to change filter"
                 }
               }
@@ -375,14 +375,15 @@ export class PublicRouter {
             ctx.status = 400
             ctx.type = 'application/json'
             ctx.body = {
-              message: 'Error',
+              status: 'ERROR',
               output: filter_settings_error
             }
           }
         } catch (error) {
           ctx.type = 'application/json'
           ctx.body = {
-            error: error
+            status: 'ERROR',
+            output: error
           }
         }
       }
@@ -391,7 +392,7 @@ export class PublicRouter {
         ctx.type = 'application/json'
         ctx.body = {
           status: "ERROR",
-          code: "IDENTIFIER_NOT_FOUND",
+          code: "Identifier not found on the filter storage",
         }
 
       }
@@ -401,7 +402,7 @@ export class PublicRouter {
       ctx.type = 'application/json'
       ctx.body = {
         status: "ERROR",
-        code: "USER_POSITION_OUT_OF_RANGE",
+        code: "User is out of range, please open a issue",
       }
     }
   }

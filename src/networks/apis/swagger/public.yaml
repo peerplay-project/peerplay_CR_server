@@ -180,17 +180,6 @@ paths:
         - JWT: []
       parameters:
         - in: query
-          name: method
-          description: Name of the method to change the NETWORK_TYPE value of the filter settings
-          schema:
-            type: string
-            nullable: false
-            default: "NETWORK_TYPE"
-            readOnly: true
-          required: true
-          x-ui-name: "disabled-input"
-          x-ui-disabled: true
-        - in: query
           name: network_type
           description: >-
             This property represents the type of network used by the user and if it allow other type of network,
@@ -248,15 +237,6 @@ paths:
       security:
         - JWT: []
       parameters:
-        - in: query
-          name: method
-          description: Name of the method to change the NETWORK_KEY value of the filter settings by a geographic key
-          schema:
-            type: string
-            nullable: false
-            default: "GEOGRAPHIC_KEY"
-            readOnly: true
-          required: true
         - in: query
           name: geographic_network_type
           description: >-
