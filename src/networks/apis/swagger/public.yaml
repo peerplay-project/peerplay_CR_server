@@ -11,6 +11,8 @@ tags:
     description: Open Swagger UI Documentation
   - name: Authentication
     description: Manage Authentication
+  - name: /account/filter
+    description: Get or Manage Filter
   - name: /network/general
     description: Get and manage general network settings
   - name: /console/ip_settings
@@ -58,11 +60,11 @@ paths:
             type: string
           required: true
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad Request
-        '500':
+        "500":
           description: Internal Server Error
   /auth/login:
     post:
@@ -85,13 +87,13 @@ paths:
             type: string
           required: true
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad Request
-        '401':
+        "401":
           description: Unauthorized
-        '500':
+        "500":
           description: Internal Server Error
   /auth/reset_password:
     post:
@@ -131,14 +133,153 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Password reset successful
-        '400':
+        "400":
           description: Bad request
-        '401':
+        "401":
           description: Unauthorized
-        '500':
+        "500":
           description: Internal server error
+  /account/filter/filter_settings:
+    get:
+      tags:
+        - /account/filter
+      summary: Get filter settings
+      description: Returns the current filter settings for the private router API.
+      security:
+        - JWT: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  output:
+                    type: object
+                    properties:
+                      network_type:
+                        type: string
+                      password:
+                        type: string
+        "400":
+          description: Bad Request
+  /account/filter/filter_settings/network_filtration:
+    post:
+      tags:
+        - /account/filter
+      summary: Enable or disable network filtration
+      description: Network Filtration will add network quality based filtration
+      security:
+        - JWT: []
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad Request
+  /account/filter/filter_settings/refresh_network_type:
+    post:
+      tags:
+      - /account/filter
+      summary: Manually Refresh Network Quality
+      description: Manually Refresh Network Quality if you want to immediately update the network quality
+      parameters:
+        - name: force_test
+          in: query
+          description: Force Speedtest to be Launched
+          required: true
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad Request
+        "500":
+          description: Unknown Error
+  /account/filter/filter_settings/password_key:
+    post:
+      tags:
+        - /account/filter
+      summary: Set filter settings (Change Network Key for a Password Key)
+      description: Change the network key of the filter settings by a Password Key
+      security:
+        - JWT: []
+      parameters:
+        - in: query
+          name: random_password
+          description: This property represents the password_key used for filter the network (used for private / party networks)
+          schema:
+            type: boolean
+        - in: query
+          name: network_key
+          description: This property represents the password_key used for filter the network (used for private / party networks)
+          schema:
+            type: string
+            maxLength: 32
+            allowEmptyValue: true
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad Request
+        "500":
+          description: Unknown Error
+  /account/filter/filter_settings/geographic_key:
+    post:
+      tags:
+        - /account/filter
+      summary: Set filter settings (Change Network Key for a Geographic Key)
+      description: Change the network key of the filter settings by a Geographic Key
+      security:
+        - JWT: []
+      parameters:
+        - in: query
+          name: geographic_network_type
+          description: >-
+            Choose Geographic Key Type
+            - WORLD: Connect to the Global Public Network
+            - CONTINENTAL: Connect to your continental Public Network
+            - COUNTRY: Connect to your country Public Network
+          schema:
+            type: string
+            enum:
+              - WORLD
+              - CONTINENTAL
+              - COUNTRY
+        - in: query
+          name: continent
+          description: >-
+            Choose Geographic Continent
+            - AM: North America and South America
+            - EU: Europe
+            - AS: Asie 
+            - AF: North America and South America
+            - OC: Europe
+          schema:
+            type: string
+            enum:
+              - AM
+              - EU
+              - AS
+              - AF
+              - OC
+        - in: query
+          name: country
+          description: This property represents your country, you must write the possible short form
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad Request
+        "500":
+          description: Unknown Error
   /network/general/status:
     get:
       summary: Get Network Status
@@ -165,7 +306,7 @@ paths:
           description: Your Position in the P2P Database is out of IP Range (Please contact the creator of the project)
 components:
   securitySchemes:
-    JWT:            # arbitrary name for the security scheme
+    JWT: # arbitrary name for the security scheme
       type: http
       scheme: bearer
       bearerFormat: JWT
