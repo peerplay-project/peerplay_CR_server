@@ -153,7 +153,6 @@ async function sendToRaw(
         manager.delete(addr);
         console.log(`Error in packet send` + error);
       } else {
-        console.log("Packet Send");
       }
     });
   } else {
@@ -167,13 +166,10 @@ function onPacket(
   filter: Buffer,
   payload: Buffer
 ) {
-  console.log("Packet Received for processing");
   switch (type) {
     case ForwarderType.Keepalive:
-      console.log("Keepalive Packet Recieved: Ignore");
       break;
     case ForwarderType.Ipv4:
-      console.log("IPV4 Packet Recieved: Send to Router");
       SLP_ROUTER(
         { node_type: "INTERSERVER", address: addr2str(peer) },
         filter,
@@ -182,7 +178,6 @@ function onPacket(
       );
       break;
     case ForwarderType.Ipv4Frag:
-      console.log("IPV4 Fragment Packet Recieved: Send to Router");
       SLP_ROUTER(
         { node_type: "INTERSERVER", address: addr2str(peer) },
         filter,
@@ -208,7 +203,6 @@ async function onMessage(peer_msg: Buffer, rinfo: AddressInfo): Promise<void> {
   const AddressInfo: AddressInfo = { address: rinfo.address, port: responsePort, family: rinfo.family }
   const peer = manager.get(AddressInfo);
   let payload = Buffer.from(msg).slice(1);
-  console.log("Packet extracted and send to packet processor");
   onPacket(peer.AddressInfo, type, filter, payload);
 }
 
@@ -314,41 +308,25 @@ export function clearExpire_INTERSERVER_USRV() {
 
 async function convertIP(ip: string): Promise<string | undefined> {
   return new Promise((resolve, reject) => {
-    console.log("Finding IP type");
     if (net.isIP(ip) === 4) {
       // Address is in IPv4 format
       const ipv6 = "::ffff:" + ip;
-      console.log("IP is in IPv4 format, converting to IPv6");
-      console.log(ip);
-      console.log("IP converted to IPv6");
-      console.log(ipv6);
       resolve(ipv6);
     } else if (net.isIP(ip) === 6) {
       // Address is in IPv6 format
-      console.log("IP is already in IPv6 format, Returning IP");
-      console.log(ip);
       resolve(ip);
     } else {
       // Address is not in IPv4 or IPv6 format, assuming it is a domain name
-      console.log("IP is not in IPv4 or IPv6 format, Performing DNS lookup");
-
       dns.lookup(ip, (err, address) => {
         if (err) {
-          console.log('DNS lookup error:', err);
           reject(err);
         } else {
-          console.log("DNS lookup successful");
-          console.log("Resolved IP:", address);
           if (net.isIP(address) === 4) {
             const ipv6 = "::ffff:" + address;
-            console.log("Resolved IP is in IPv4 format, converting to IPv6");
-            console.log(ipv6);
             resolve(ipv6);
           } else if (net.isIP(address) === 6) {
-            console.log("Resolved IP is already in IPv6 format");
             resolve(address);
           } else {
-            console.log("Resolved IP is not in IPv4 or IPv6 format");
             reject(new Error("Resolved IP is not in IPv4 or IPv6 format"));
           }
         }

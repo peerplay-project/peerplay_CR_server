@@ -37,7 +37,6 @@ export function start_USRV(
   start_EXTERNAL_USRV(PeerplayData.ExternalPortNum);
   start_INTERSERVER_USRV(server_info.address,server_info.interserver_local,server_info.interserver_internet,PeerplayData.DatabasePassword);
   const ora = require("ora-classic");
-  if (process.env.NODE_ENV === "production") {
     const spinner = ora("");
     spinner.spinner = custom_spin;
     spinner.start();
@@ -49,7 +48,6 @@ export function start_USRV(
       const server_size = get_server_size();
       spinner.text = ` Peerplay: Running\n    [Network Repartition] :\n      - Total: ${server_size.total_clients}\n      - Local: ${server_size.local_clients}\n      - External: ${server_size.external_clients}\n      - Interserver: ${server_size.interserver_clients}\n`;
     }, 1000);
-  }
 }
 export function get_server_info() {
   return server_info;

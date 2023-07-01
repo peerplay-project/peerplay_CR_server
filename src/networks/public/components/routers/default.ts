@@ -1,5 +1,5 @@
 import moment from "moment";
-import { ForwarderType } from "../../../toolkit";
+import { ForwarderType, ip_calculator_from_ip } from "../../../toolkit";
 import { getClientFilter_EXTERNAL_USRV, sendBroadcast_EXTERNAL_USRV, sendTo_EXTERNAL_USRV } from "../entrypoints/external";
 import { sendBroadcast_INTERSERVER_USRV, sendTo_INTERSERVER_USRV } from "../entrypoints/interserver";
 import { getClientFilter_LOCAL_USRV, sendBroadcast_LOCAL_USRV, sendTo_LOCAL_USRV } from "../entrypoints/local";
@@ -26,7 +26,7 @@ interface CacheItem {
 let ipCache: Map<number, CacheItem> = new Map();
 
 
-function clearRouterCacheItem<T, U extends { expireAt: number }>(map: Map<T, U>) {
+function clearRouterCacheItem<T extends number, U extends { expireAt: number }>(map: Map<T, U>) {
   const now = Date.now();
   for (const [key, { expireAt }] of map) {
     if (expireAt < now) {
@@ -117,6 +117,7 @@ export function clearExpire_SLP_ROUTER() {
 }
 
 function redirect(node: Node, Fragment: boolean, payload: Buffer, source_filter: Buffer, virtual_address: string) {
+  const ip_identifier = ip_calculator_from_ip(virtual_address,'255.0.0.0')
   let Forwarder
   if (Fragment) {
     Forwarder = ForwarderType.Ipv4Frag
@@ -138,31 +139,43 @@ function redirect(node: Node, Fragment: boolean, payload: Buffer, source_filter:
   switch (node.node_type) {
     case 'LOCAL':
       // Destination Filter Settings
-      destination_filter = getClientFilter_LOCAL_USRV(virtual_address)
+      destination_filter = getClientFilter_LOCAL_USRV(ip_identifier)
       destination_networkType = destination_filter.slice(9, 12).toString(); // NETWORK_TYPE est entre 9 et 12
       destination_connectType = destination_filter.slice(12, 16).toString().split('\0')[0]; // CONNECT_TYPE est entre 13 et 16 et on enlève les zéros
       destination_password = destination_filter.slice(17, 53).toString().split('\0')[0]; // PASSWORD est entre 13 et 52 et on enlève les zéros
       destination_pool = destination_filter.slice(54, 90).toString().split('\0')[0]; // POOL est entre 52 et 90 et on enlève les zéros
       if (source_networkType === destination_networkType && source_connectType === destination_connectType && source_password === destination_password && source_pool === destination_pool) {
+        console.log('Packet Validated by filter')
         sendTo_LOCAL_USRV(node.address, Forwarder, payload).then()
       }
       else {
-        console.log("Client Filter doesn't match, Aborting")
+      console.log('Packet refused by filter')
+      console.log(`${source_networkType} / ${destination_networkType}`)
+      console.log(`${source_connectType} / ${destination_connectType}`)
+      console.log(`${source_password} / ${destination_password}`)
+      console.log(`${source_pool} / ${destination_pool}`)
+      console.log('--------------------------')
       }
       break;
     case 'EXTERNAL':
             // Destination Filter Settings
-            destination_filter = getClientFilter_EXTERNAL_USRV(virtual_address)
+            destination_filter = getClientFilter_EXTERNAL_USRV(ip_identifier)
             destination_networkType = destination_filter.slice(9, 12).toString(); // NETWORK_TYPE est entre 9 et 12
             destination_connectType = destination_filter.slice(12, 16).toString().split('\0')[0]; // CONNECT_TYPE est entre 13 et 16 et on enlève les zéros
             destination_password = destination_filter.slice(17, 53).toString().split('\0')[0]; // PASSWORD est entre 13 et 52 et on enlève les zéros
             destination_pool = destination_filter.slice(54, 90).toString().split('\0')[0]; // POOL est entre 52 et 90 et on enlève les zéros
             if (source_networkType === destination_networkType && source_connectType === destination_connectType && source_password === destination_password && source_pool === destination_pool) {
+              console.log('Packet Validated by filter')
               sendTo_EXTERNAL_USRV(node.address, Forwarder, payload).then()
             }
             else {
-              console.log("Client Filter doesn't match, Aborting")
-            }
+              console.log('Packet refused by filter')
+              console.log(`${source_networkType} / ${destination_networkType}`)
+              console.log(`${source_connectType} / ${destination_connectType}`)
+              console.log(`${source_password} / ${destination_password}`)
+              console.log(`${source_pool} / ${destination_pool}`)
+              console.log('--------------------------')
+              }
       break;
     case 'INTERSERVER':
       sendTo_INTERSERVER_USRV({ address: node.address, type: Forwarder, payload }, source_filter).then()

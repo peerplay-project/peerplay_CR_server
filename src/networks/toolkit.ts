@@ -1,4 +1,4 @@
-export const Timeout = 30 * 1000
+export const Timeout = 5 * 1000
 export let JWT_SECRET = ''
 export enum ForwarderType {
   Keepalive = 0,
@@ -14,7 +14,7 @@ export const ForwarderTypeMap: Record<ForwarderType, Buffer> = {
   [ForwarderType.Ipv4Frag]: Buffer.from([ForwarderType.Ipv4Frag]),
   [ForwarderType.Info]: Buffer.from([ForwarderType.Info]),
 };
-
+// Lookup functions
 export function lookup4(
   hostname: string,
   options: any,
@@ -29,11 +29,12 @@ export function lookup6(
 ) {
   callback(null, hostname, 6);
 }
-
+// JWT functions
 export function setJwtSecret(newSecret: string) {
   JWT_SECRET = newSecret;
 }
 
+// IP Calculators
 export function ip_calculator_from_position(position: number, firstIP: string, lastIP: string, subnetMask: string): string|undefined {
   const firstIPParts = firstIP.split('.').map(Number);
   const lastIPParts = lastIP.split('.').map(Number);
@@ -65,4 +66,46 @@ export function ip_calculator_from_ip(ip: string, subnetMask: string): string {
   const dynamicIPParts = ipParts.map((part, index) => part & ~subnetMaskParts[index]);
 
   return dynamicIPParts.slice(1).join('.');
+}
+
+// Network Quality
+// Dépendances spécifiques pour chaque catégorie
+export const uploadDependencies = [
+  { threshold: 1, quality: 5 },
+  { threshold: 5, quality: 4 },
+  { threshold: 10, quality: 3 },
+  { threshold: 20, quality: 2 },
+  { threshold: Infinity, quality: 1 },
+];
+
+export const downloadDependencies = [
+  { threshold: 1, quality: 5 },
+  { threshold: 5, quality: 4 },
+  { threshold: 10, quality: 3 },
+  { threshold: 20, quality: 2 },
+  { threshold: Infinity, quality: 1 },
+];
+
+export const pingDependencies = [
+  { threshold: 15, quality: 1 },
+  { threshold: 30, quality: 2 },
+  { threshold: 100, quality: 3 },
+  { threshold: 150, quality: 4 },
+  { threshold: Infinity, quality: 5  },
+];
+
+export const jitterDependencies = [
+  { threshold: 5, quality: 1 },
+  { threshold: 10, quality: 2 },
+  { threshold: 20, quality: 3 },
+  { threshold: 30, quality: 4 },
+  { threshold: Infinity, quality: 5 },
+];
+
+export function split_filter(filter: Buffer){
+  const networkType = filter.slice(9, 12); // NETWORK_TYPE est entre 9 et 12
+  const connectType = filter.slice(12, 16); // CONNECT_TYPE est entre 13 et 16 et on enlève les zéros
+  const password = filter.slice(17, 53); // PASSWORD est entre 13 et 52 et on enlève les zéros
+  const pool = filter.slice(54, 90); // POOL est entre 52 et 90 et on enlève les zéros
+  return { NETWORK_TYPE: networkType, CONNECT_TYPE: connectType, PASSWORD: password, POOL: pool };
 }

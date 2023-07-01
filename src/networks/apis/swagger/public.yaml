@@ -166,42 +166,41 @@ paths:
                         type: string
                       password:
                         type: string
-                      strict_mode:
-                        type: boolean
         "400":
           description: Bad Request
-  /account/filter/filter_settings/network_type:
+  /account/filter/filter_settings/network_filtration:
     post:
       tags:
         - /account/filter
-      summary: Set filter settings (Network Type)
-      description: Change the network type.
+      summary: Enable or disable network filtration
+      description: Network Filtration will add network quality based filtration
       security:
         - JWT: []
-      parameters:
-        - in: query
-          name: network_type
-          description: >-
-            This property represents the type of network used by the user and if it allow other type of network,
-            The possible values are:
-            - NT1: All users including you are connected to the Internet using Optic Network (FTTH).
-            - NT2: All users including you are connected to the Internet using Copper Network (ADSL).
-            - NT3: All users including you are connected to the Internet using Mobile Network.
-            - ANY: All users including you accept all
-          schema:
-            type: string
-            enum:
-              - NT1
-              - NT2
-              - NT3
-              - ANY
-            maxLength: 3
-          required: true
       responses:
         "200":
           description: Success
         "400":
           description: Bad Request
+  /account/filter/filter_settings/refresh_network_type:
+    post:
+      tags:
+      - /account/filter
+      summary: Manually Refresh Network Quality
+      description: Manually Refresh Network Quality if you want to immediately update the network quality
+      parameters:
+        - name: force_test
+          in: query
+          description: Force Speedtest to be Launched
+          required: true
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad Request
+        "500":
+          description: Unknown Error
   /account/filter/filter_settings/password_key:
     post:
       tags:
@@ -228,6 +227,8 @@ paths:
           description: Success
         "400":
           description: Bad Request
+        "500":
+          description: Unknown Error
   /account/filter/filter_settings/geographic_key:
     post:
       tags:
@@ -277,6 +278,8 @@ paths:
           description: Success
         "400":
           description: Bad Request
+        "500":
+          description: Unknown Error
   /network/general/status:
     get:
       summary: Get Network Status

@@ -19,7 +19,7 @@ CONNECT_TYPE.write("ANY");
 const DASH = Buffer.alloc(1); // buffer de taille 1
 DASH.write("-");
 const PASSWORD = Buffer.alloc(36); // buffer de taille 36
-PASSWORD.write("WORLD");
+PASSWORD.write("GEO_WORLD");
 const SLASH = Buffer.alloc(1); // buffer de taille 1
 SLASH.write("/");
 const POOL = Buffer.alloc(36); // buffer de taille 36
@@ -28,8 +28,10 @@ const default_filter = Buffer.concat([PEERPLAY_HEADER, NETWORK_TYPE,CONNECT_TYPE
 
 class Filter {
   Filter: Buffer;
+  expireAt: number;
   constructor(filter: Buffer) {
     this.Filter = filter;
+    this.expireAt = Date.now() + Timeout;
   }
 }
 
@@ -37,6 +39,7 @@ class FilterManager {
   protected map: Map<
     string,
     {
+      expireAt: number;
       Filter: Buffer;
     }
   > = new Map();
@@ -47,12 +50,16 @@ class FilterManager {
     const map = this.map;
     const filterData: Filter | undefined = map.get(ip_identifier);
     if (filterData !== undefined) {
+      filterData.expireAt = Date.now() + Timeout;
       return filterData;
     }
     else {
       map.set(ip_identifier, new Filter(default_filter));
       return new Filter(default_filter);
     }
+  }
+  clearExpire() {
+    clearCacheItem(this.map);
   }
   find(ip_identifier: string,): { source: string, filter: Buffer } | undefined {
     const map = this.map;
@@ -74,6 +81,17 @@ class FilterManager {
     if (map.get(ip_identifier)?.Filter === new_filter) {
       return true;
     }
+  }
+  all(): { identifier: string; filter: Buffer }[] {
+    const allFilters: {
+      identifier: string;
+      filter: Buffer;
+    }[] = [];
+
+    for (let [key, { Filter }] of this.map) {
+      allFilters.push({ identifier: key, filter: Filter });
+    }
+    return allFilters;
   }
 }
 
@@ -149,6 +167,7 @@ function clearCacheItem<T, U extends { expireAt: number }>(map: Map<T, U>) {
   const now = Date.now();
   for (const [key, { expireAt }] of map) {
     if (expireAt < now) {
+      console.log(`EXTERNAL cleared ${key}`)
       map.delete(key);
     }
   }
@@ -294,9 +313,36 @@ export function findClientFilter_EXTERNAL_USRV(ip_identifier: string)
   return filter.find(ip_identifier)
 }
 
-export function setClientFilter_EXTERNAL_USRV(ip_identifier: string, new_filter: Buffer)
-{
-  return filter.set(ip_identifier, new_filter)
+export function getAllClientFilter_EXTERNAL_USRV() {
+    return filter.all();
+}
+
+export function setClientFilter_EXTERNAL_USRV(
+  ip_identifier: string,
+  new_filter: {
+    NETWORK_TYPE: Buffer;
+    CONNECT_TYPE: Buffer;
+    PASSWORD: Buffer;
+    POOL: Buffer;
+  }
+) {
+  let Filter = filter.find(ip_identifier);
+  if (Filter !== undefined) {
+    let new_password = new_filter.PASSWORD;
+    let new_pool = new_filter.POOL;
+    return filter.set(
+      ip_identifier,
+      Buffer.concat([
+        PEERPLAY_HEADER,
+        NETWORK_TYPE,
+        CONNECT_TYPE,
+        DASH,
+        new_password,
+        SLASH,
+        new_pool,
+      ]),
+    );
+  }
 }
 export function getClientSize_EXTERNAL_USRV() {
   return manager.size
@@ -304,4 +350,5 @@ export function getClientSize_EXTERNAL_USRV() {
 
 export function clearExpire_EXTERNAL_USRV(){
   manager.clearExpire()
+  filter.clearExpire()
 }
