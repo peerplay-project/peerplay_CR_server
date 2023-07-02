@@ -4,9 +4,129 @@ import {
   ForwarderTypeMap,
   Timeout,
   lookup6,
+  ip_calculator_from_position,
+  ip_calculator_from_ip,
 } from "../../../toolkit";
 import { isString } from "util";
 import { SLP_ROUTER } from "../routers/default";
+// Default Filter Settings
+const PEERPLAY_HEADER = Buffer.alloc(9); // buffer de taille 9
+PEERPLAY_HEADER.write("peerplay:");
+const NETWORK_TYPE = Buffer.alloc(3); // buffer de taille 3
+NETWORK_TYPE.write("ANY");
+const CONNECT_TYPE = Buffer.alloc(4); // buffer de taille 3
+CONNECT_TYPE.write("ANY");
+const DASH = Buffer.alloc(1); // buffer de taille 1
+DASH.write("-");
+const PASSWORD = Buffer.alloc(36); // buffer de taille 36
+PASSWORD.write("GEO_WORLD");
+const SLASH = Buffer.alloc(1); // buffer de taille 1
+SLASH.write("/");
+const POOL = Buffer.alloc(36); // buffer de taille 36
+POOL.fill("");
+const default_filter = Buffer.concat([
+  PEERPLAY_HEADER,
+  NETWORK_TYPE,
+  CONNECT_TYPE,
+  DASH,
+  PASSWORD,
+  SLASH,
+  POOL,
+]);
+
+class Filter {
+  Filter: Buffer;
+  Strict: boolean;
+  expireAt: number;
+  constructor(filter: Buffer, strict: boolean) {
+    this.Filter = filter;
+    this.Strict = strict;
+    this.expireAt = Date.now() + Timeout;
+  }
+}
+
+class FilterManager {
+  protected map: Map<
+    string,
+    {
+      expireAt: number;
+      Filter: Buffer;
+      Strict: boolean;
+    }
+  > = new Map();
+  delete(ip_identifier: string) {
+    return this.map.delete(ip_identifier);
+  }
+  get(ip_identifier: string): Filter {
+    const map = this.map;
+    const filterData: Filter | undefined = map.get(ip_identifier);
+    if (filterData !== undefined) {
+      filterData.expireAt = Date.now() + Timeout;
+      return filterData;
+    } else {
+      map.set(ip_identifier, new Filter(default_filter, false));
+      return new Filter(default_filter, false);
+    }
+  }
+  find(ip_identifier: string): { source: string; filter: Buffer, strict: boolean } | undefined {
+    const map = this.map;
+    const filterData: Filter | undefined = map.get(ip_identifier);
+    if (filterData !== undefined) {
+      return {
+        source: "LOCAL",
+        filter: filterData.Filter,
+        strict: filterData.Strict,
+      };
+    } else {
+      return undefined;
+    }
+  }
+  switchStrict(ip_identifier: string) {
+    const map = this.map;
+    let filterData: Filter | undefined = map.get(ip_identifier);
+    if (filterData !== undefined) {
+      filterData.Strict = !filterData.Strict;
+      map.set(ip_identifier, filterData);
+      filterData = map.get(ip_identifier);
+      console.log(filterData?.Strict);
+      return {
+        result: true,
+        strict: filterData?.Strict,
+      };
+    } else {
+      return {
+        result: true,
+        strict: undefined,
+      };
+    }
+  }
+  clearExpire() {
+    clearCacheItem(this.map);
+  }
+  set(ip_identifier: string, new_filter: Buffer, strict: boolean) {
+    // Set New Filter
+    const map = this.map;
+    map.set(ip_identifier, new Filter(new_filter, strict));
+    if (
+      map.get(ip_identifier)?.Filter === new_filter &&
+      map.get(ip_identifier)?.Strict === strict
+    ) {
+      return true;
+    }
+  }
+  all(): { identifier: string; strict: boolean; filter: Buffer }[] {
+    const allFilters: {
+      identifier: string;
+      strict: boolean;
+      filter: Buffer;
+    }[] = [];
+
+    for (let [key, { Filter, Strict }] of this.map) {
+      allFilters.push({ identifier: key, strict: Strict, filter: Filter });
+    }
+    return allFilters;
+  }
+}
 
 class Peer {
   AddressInfo: AddressInfo;
@@ -64,6 +184,7 @@ class PeerManager {
 }
 
 const manager: PeerManager = new PeerManager();
+const filter: FilterManager = new FilterManager();
 const server = createSocket({
   type: "udp6",
   lookup: lookup6,
@@ -98,12 +219,9 @@ function str2addr(str: string) {
 }
 
 function onError(err: Error) {
-  console.log(`server error:\n${err.stack}`);
   server.close();
 }
-function onClose() {
-  console.log(`server closed`);
-}
+function onClose() {}
 
 function parseHead(msg: Buffer): {
   type: ForwarderType;
@@ -130,19 +248,42 @@ function sendToRaw(addr: AddressInfo, msg: Buffer) {
 }
 
 function onPacket(peer: AddressInfo, type: ForwarderType, payload: Buffer) {
+  let SOURCE_IP_BUFFER: Buffer;
+  let ip_filter: Buffer;
   switch (type) {
     case ForwarderType.Keepalive:
       break;
     case ForwarderType.Ipv4:
+      const IPV4_OFF_SRC = 12;
+      SOURCE_IP_BUFFER = payload.slice(IPV4_OFF_SRC, IPV4_OFF_SRC + 32);
+      ip_filter = filter.get(
+        ip_calculator_from_ip(
+          `${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`,
+          "255.0.0.0"
+        )
+      ).Filter;
       SLP_ROUTER(
         { node_type: "LOCAL", address: addr2str(peer) },
+        ip_filter,
         payload,
         false
       );
       break;
     case ForwarderType.Ipv4Frag:
+      const IPV4_FRAG_OFF_SRC = 0;
+      SOURCE_IP_BUFFER = payload.slice(
+        IPV4_FRAG_OFF_SRC,
+        IPV4_FRAG_OFF_SRC + 32
+      );
+      ip_filter = filter.get(
+        ip_calculator_from_ip(
+          `${SOURCE_IP_BUFFER[0]}.${SOURCE_IP_BUFFER[1]}.${SOURCE_IP_BUFFER[2]}.${SOURCE_IP_BUFFER[3]}`,
+          "255.0.0.0"
+        )
+      ).Filter;
       SLP_ROUTER(
         { node_type: "LOCAL", address: addr2str(peer) },
+        ip_filter,
         payload,
         true
       );
@@ -204,11 +345,55 @@ export async function sendBroadcast_LOCAL_USRV(
     }
   }
 }
-
+export function getClientFilter_LOCAL_USRV(ip_identifier: string) {
+  return filter.get(ip_identifier).Filter;
+}
+export function switchStrictClientFilter_LOCAL_USRV(ip_identifier: string) {
+  return filter.switchStrict(ip_identifier);
+}
+export function getAllClientFilter_LOCAL_USRV() {
+  const filters = filter.all();
+  return filters;
+}
+export function findClientFilter_LOCAL_USRV(ip_identifier: string) {
+  return filter.find(ip_identifier);
+}
+export function setClientFilter_LOCAL_USRV(
+  ip_identifier: string,
+  new_filter: {
+    NETWORK_TYPE: Buffer;
+    CONNECT_TYPE: Buffer;
+    PASSWORD: Buffer;
+    POOL: Buffer;
+  },
+  strict: boolean | undefined
+) {
+  let Filter = filter.find(ip_identifier);
+  if (Filter !== undefined) {
+    let new_networkType = new_filter.NETWORK_TYPE;
+    let new_connectType = new_filter.CONNECT_TYPE;
+    let new_password = new_filter.PASSWORD;
+    let new_pool = new_filter.POOL;
+    return filter.set(
+      ip_identifier,
+      Buffer.concat([
+        PEERPLAY_HEADER,
+        new_networkType,
+        new_connectType,
+        DASH,
+        new_password,
+        SLASH,
+        new_pool,
+      ]),
+      strict || Filter.strict
+    );
+  }
+}
 export function getClientSize_LOCAL_USRV() {
-  return manager.size
+  return manager.size;
 }
 
-export function clearExpire_LOCAL_USRV(){
-  manager.clearExpire()
+export function clearExpire_LOCAL_USRV() {
+  manager.clearExpire();
+  filter.clearExpire();
 }
