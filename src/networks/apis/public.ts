@@ -57,11 +57,7 @@ interface changes {
     };
   }[];
 }
-let test_in_progress = false;
-let lastTest:
-  | undefined
-  | { upload: number; download: number; ping: number; jitter: number } =
-  undefined;
+let last_log = "";
 const PEERPLAY_HEADER = Buffer.alloc(9); // buffer de taille 9
 PEERPLAY_HEADER.write("peerplay:");
 const DASH = Buffer.alloc(1); // buffer de taille 1
@@ -431,10 +427,17 @@ export class PublicRouter {
         };
       } else {
         // Cas ou le Processus de modification a rencontré des erreurs ou que le nombre de modifications effectuées n'est pas le même que le nombre de modifications demandées
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": Error Found on Processing Module, Returning Response to Client"
-        );
+        if (last_log !== filter_process_errors[0]){
+          last_log = filter_process_errors[0];
+          console.log(
+            new Date().toLocaleTimeString() +
+            filter_process_errors[0]
+          );
+          console.log(
+            new Date().toLocaleTimeString() + ": " +
+              ": Error Found on Processing Module, Returning Response to Client"
+          );
+        }
         ctx.status = 400;
         ctx.type = "application/json";
         ctx.body = {
@@ -445,10 +448,17 @@ export class PublicRouter {
       }
     } else {
       // Cas ou le Calcul des modifications necessaires a rencontré des erreurs
-      console.log(
-        new Date().toLocaleTimeString() +
-          ": Error Found on Filter Script, Returning Response to Client"
-      );
+      if (last_log !== filter_calculation_errors[0]){
+        last_log = filter_calculation_errors[0];
+        console.log(
+          new Date().toLocaleTimeString() + ": " +
+          filter_calculation_errors[0]
+        );
+        console.log(
+          new Date().toLocaleTimeString() +
+            ": Error Found on Calculation Module, Returning Response to Client"
+        );
+      }
       ctx.status = 400;
       ctx.type = "application/json";
       ctx.body = {
@@ -538,10 +548,6 @@ async function setFilterNetworkType(
       }
     ) {
       if (err) {
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": ERROR : Unable to get active interface"
-        );
         throw new Error("Unable to get active interface");
       } else {
         if (saved_interface.name !== obj.name ||
@@ -572,17 +578,9 @@ async function setFilterNetworkType(
       speedtest_running = false;
     } else {
       if (speedtest_result === undefined && speedtest_running) {
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": ERROR : Speedtest is already running"
-        );
         throw new Error("Speedtest is already running");
       }
       if (speedtest_result === undefined && !speedtest_running) {
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": ERROR : No speedtest result available"
-        );
         throw new Error("No speedtest result available");
       }
     }
@@ -624,10 +622,6 @@ async function setFilterNetworkType(
         pingQuality === 0 ||
         jitterQuality === 0
       ) {
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": ERROR : Unable to compute Network Quality from Speedtest"
-        );
         throw new Error("Unable to compute Network Quality from Speedtest");
       } else {
         globalQuality = Math.max(
@@ -638,10 +632,6 @@ async function setFilterNetworkType(
         );
       }
     } else {
-      console.log(
-        new Date().toLocaleTimeString() +
-          ": ERROR : Unable to obtain Speedtest Results"
-      );
       throw new Error("Unable to obtain Speedtest Results");
     }
   } catch (e) {
@@ -672,10 +662,6 @@ async function setFilterNetworkType(
         });
       });
     } else {
-      console.log(
-        new Date().toLocaleTimeString() +
-          ": ERROR : Global Quality is not valid"
-      );
       throw new Error("Global Quality is not valid");
     }
   } catch (e) {
@@ -695,9 +681,6 @@ async function setFilterNetworkType(
       if (ctx.request.query.allow_empty === "true") {
       }
     } else {
-      console.log(
-        new Date().toLocaleTimeString() + ": ERROR : LOCAL Changes is empty"
-      );
       throw new Error("LOCAL Changes is empty");
     }
   } catch (e) {
@@ -738,10 +721,6 @@ async function setFilterPasswordKey(
       if (ctx.request.query.random_password === "true") {
         password_key = uuidv4().slice(0, 32);
       } else {
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": ERROR : Provided Password Key is an invalid value"
-        );
         throw new Error("Provided Password Key is an invalid value");
       }
     }
@@ -785,30 +764,17 @@ async function setFilterPasswordKey(
               });
             } else {
               // Case unable to obtain filter source
-              console.log(
-                new Date().toLocaleTimeString() +
-                  ": ERROR : Unable to obtain Filter Source, actual data: " +
-                  filter.source
-              );
-              throw new Error("Unable to obtain Filter Source");
+              throw new Error("Unable to obtain Filter Source, actual data: " +
+              filter.source);
             }
           }
         }
       } else {
         // Case unable to obtain ip identifier
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": ERROR : Unable to obtain IP Identifier"
-        );
         throw new Error("Unable to obtain IP Identifier");
       }
     } else {
       // Case stored Password Key is not valid
-      console.log(password_key.length);
-      console.log(
-        new Date().toLocaleTimeString() +
-          ": ERROR : Stored Password Key is not valid"
-      );
       throw new Error("Stored Password Key is not valid");
     }
   } catch (e) {
@@ -825,9 +791,6 @@ async function setFilterPasswordKey(
       (changes.LOCAL.length === 0 && changes.EXTERNAL.length === 0)
     ) {
     } else {
-      console.log(
-        new Date().toLocaleTimeString() + ": ERROR : No Changes Found"
-      );
       throw new Error("No Changes Found");
     }
   } catch (e) {
@@ -889,10 +852,6 @@ async function setFilterGeographicKey(
         geographic_key = `${ctx.request.query.continent}-${ctx.request.query.country}`;
       }
     } else {
-      console.log(
-        new Date().toLocaleTimeString() +
-          ": ERROR : Provided Data is an invalid value"
-      );
       throw new Error("Provided Data Key is an invalid value");
     }
   } catch (e) {
@@ -935,30 +894,17 @@ async function setFilterGeographicKey(
               });
             } else {
               // Case unable to obtain filter source
-              console.log(
-                new Date().toLocaleTimeString() +
-                  ": ERROR : Unable to obtain Filter Source, actual data: " +
-                  filter.source
-              );
-              throw new Error("Unable to obtain Filter Source");
+              throw new Error("Unable to obtain Filter Source, actual data: " +
+              filter.source);
             }
           }
         }
       } else {
         // Case unable to obtain ip identifier
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": ERROR : Unable to obtain IP Identifier"
-        );
         throw new Error("Unable to obtain IP Identifier");
       }
     } else {
       // Case stored Password Key is not valid
-      console.log(geographic_key.length);
-      console.log(
-        new Date().toLocaleTimeString() +
-          ": ERROR : Stored Password Key is not valid"
-      );
       throw new Error("Stored Password Key is not valid");
     }
   } catch (e) {
@@ -975,9 +921,6 @@ async function setFilterGeographicKey(
       (changes.LOCAL.length === 0 && changes.EXTERNAL.length === 0)
     ) {
     } else {
-      console.log(
-        new Date().toLocaleTimeString() + ": ERROR : No Changes Found"
-      );
       throw new Error("No Changes Found");
     }
   } catch (e) {
@@ -1014,10 +957,6 @@ async function setFilterPool(
     ) {
       pool = ctx.request.query.pool;
     } else {
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": ERROR : Provided pool is an invalid value"
-        );
         throw new Error("Provided pool is an invalid value");
     }
   } catch (e) {
@@ -1060,29 +999,16 @@ async function setFilterPool(
               });
             } else {
               // Case unable to obtain filter source
-              console.log(
-                new Date().toLocaleTimeString() +
-                  ": ERROR : Unable to obtain Filter Source, actual data: " +
-                  filter.source
-              );
               throw new Error("Unable to obtain Filter Source");
             }
           }
         }
       } else {
         // Case unable to obtain ip identifier
-        console.log(
-          new Date().toLocaleTimeString() +
-            ": ERROR : Unable to obtain IP Identifier"
-        );
         throw new Error("Unable to obtain IP Identifier");
       }
     } else {
       // Case stored Password Key is not valid
-      console.log(
-        new Date().toLocaleTimeString() +
-          ": ERROR : Stored Password Key is not valid"
-      );
       throw new Error("Stored Password Key is not valid");
     }
   } catch (e) {
@@ -1099,9 +1025,6 @@ async function setFilterPool(
       (changes.LOCAL.length === 0 && changes.EXTERNAL.length === 0)
     ) {
     } else {
-      console.log(
-        new Date().toLocaleTimeString() + ": ERROR : No Changes Found"
-      );
       throw new Error("No Changes Found");
     }
   } catch (e) {
