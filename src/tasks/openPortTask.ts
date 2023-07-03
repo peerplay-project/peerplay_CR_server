@@ -3,6 +3,8 @@ import chalk from "chalk";
 import { PeerplayData } from "../interface";
 
 interface arg {
+  component: string;
+  external_server_opened: boolean;
   port: number;
   port_range: number;
   task: ListrTaskWrapper<any, any>;
@@ -57,6 +59,8 @@ export const openPortTask = new Listr(
       task: async (ctx, task) => {
         const PeerplayData: PeerplayData = ctx.peerplay_data;
         const result = await openPort({
+          component: "INTERSERVER",
+          external_server_opened: PeerplayData.ExternalServerOpened,
           port: PeerplayData.InterserverPortNum,
           port_range: PeerplayData.MinimalPortRange,
           task: task,
@@ -84,15 +88,17 @@ export const openPortTask = new Listr(
 
       task: async (ctx, task) => {
         const PeerplayData: PeerplayData = ctx.peerplay_data;
-        if (PeerplayData.ExternalPortNum == 0) {
+        if (PeerplayData.ExternalServerOpened === false) {
           upnpConfig.external = { TCP: false, UDP: false };
           description.push("Peerplay : External", "Peerplay : External");
           task.title = chalk.gray(
             "Trying to Open External Port - Port Not Specified"
           );
-          task.skip();
+          task.skip('Port Not Specified');
         } else {
           const result = await openPort({
+            component: "EXTERNAL",
+            external_server_opened: PeerplayData.ExternalServerOpened,
             port: PeerplayData.ExternalPortNum,
             port_range: PeerplayData.MinimalPortRange,
             task: task,
@@ -119,61 +125,68 @@ export const openPortTask = new Listr(
       title: "Trying to Open Database Port",
       task: async (ctx, task) => {
         const PeerplayData: PeerplayData = ctx.peerplay_data;
-        if (PeerplayData.ExternalPortNum == 0) {
-          upnpConfig.external = { TCP: false, UDP: false };
-          description.push("Peerplay : External", "Peerplay : External");
-          task.title = chalk.gray(
-            "Trying to Open API Port - External Server Disabled"
+        const result = await openPort({
+          component: "DATABASE",
+          external_server_opened: PeerplayData.ExternalServerOpened,
+          port: PeerplayData.DatabasePortNum,
+          port_range: PeerplayData.MinimalPortRange,
+          task: task,
+          description: "Peerplay : Database",
+        });
+        upnpConfig.database = { UDP: false, TCP: result.upnp_settings.TCP };
+        task.title = result.upnp_config_results.title;
+        task.output = result.upnp_config_results.output;
+        if (result.upnp_config_results.status === "warning") {
+          ctx.warning_messages.push(
+            "UPNP/DATABASE : " + result.upnp_config_results.output
           );
-          task.skip();
-        } else {
-          const result = await openPort({
-            port: PeerplayData.DatabasePortNum,
-            port_range: PeerplayData.MinimalPortRange,
-            task: task,
-            description: "Peerplay : Database",
-          });
-          upnpConfig.database = { UDP: false, TCP: result.upnp_settings.TCP };
-          task.title = result.upnp_config_results.title;
-          task.output = result.upnp_config_results.output;
-          if (result.upnp_config_results.status === "warning") {
-            ctx.warning_messages.push(
-              "UPNP/DATABASE : " + result.upnp_config_results.output
-            );
-          }
-          if (result.upnp_config_results.status === "error") {
-            ctx.error_messages.push(
-              "UPNP/DATABASE : " + result.upnp_config_results.output
-            );
-          }
-          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
+        if (result.upnp_config_results.status === "error") {
+          ctx.error_messages.push(
+            "UPNP/DATABASE : " + result.upnp_config_results.output
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       },
     },
     {
       title: "Trying to Open API Port",
       task: async (ctx, task) => {
         const PeerplayData: PeerplayData = ctx.peerplay_data;
-        const result = await openPort({
-          port: PeerplayData.PublicAPIPort,
-          port_range: PeerplayData.MinimalPortRange,
-          task: task,
-          description: "Peerplay : API",
-        });
-        upnpConfig.API = { UDP: false, TCP: result.upnp_settings.TCP };
-        task.title = result.upnp_config_results.title;
-        task.output = result.upnp_config_results.output;
-        if (result.upnp_config_results.status === "warning") {
-          ctx.warning_messages.push(
-            "UPNP/API : " + result.upnp_config_results.output
+        if (PeerplayData.ExternalServerOpened === false) {
+          upnpConfig.external = { TCP: false, UDP: false };
+          description.push("Peerplay : API", "Peerplay : API");
+          task.title = chalk.gray(
+            "Trying to Open API Port - External Server Disabled"
           );
+          task.skip('External Server Disabled');
+        } else {
+          const result = await openPort({
+            component: "API",
+            external_server_opened: PeerplayData.ExternalServerOpened,
+            port: PeerplayData.PublicAPIPort,
+            port_range: PeerplayData.MinimalPortRange,
+            task: task,
+            description: "Peerplay : API",
+          });
+          upnpConfig.API = { UDP: false, TCP: result.upnp_settings.TCP };
+          task.title = result.upnp_config_results.title;
+          task.output = result.upnp_config_results.output;
+          if (result.upnp_config_results.status === "warning") {
+            ctx.warning_messages.push(
+              "UPNP/API : " + result.upnp_config_results.output
+            );
+          }
+          if (result.upnp_config_results.status === "error") {
+            ctx.error_messages.push(
+              "UPNP/API : " + result.upnp_config_results.output
+            );
+          }
+          if (result.upnp_config_results.status === "skip") {
+            task.skip(result.upnp_config_results.output);
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
-        if (result.upnp_config_results.status === "error") {
-          ctx.error_messages.push(
-            "UPNP/API : " + result.upnp_config_results.output
-          );
-        }
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       },
     },
     {
@@ -286,7 +299,19 @@ const verifyPortMapping = async (results: any, args: arg, err: any) => {
 };
 
 const openPort = async (args: arg) => {
-  // try open tcp and udp port
+  if ((args.component === "EXTERNAL" || args.component === "API") && args.external_server_opened === false) {
+    return {
+      upnp_settings: { TCP: false, UDP: false },
+      upnp_config_results: {
+        title: chalk.blue(args.task.title + " [SKIPPED]"),
+        output: "External Server is not opened",
+        status: "skip",
+      },
+    };
+  }
+  else
+  {
+    // try open tcp and udp port
   try {
     const natUpnp = require("nat-upnp");
     const client = natUpnp.createClient();
@@ -345,6 +370,7 @@ const openPort = async (args: arg) => {
         status: "error",
       },
     };
+  }
   }
 };
 

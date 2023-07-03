@@ -8,6 +8,7 @@ export interface PeerplayData {
     PublicAPIPort: number;
     PrivateAPIPort: number;
     LocalPortNum: number;
+    ExternalServerOpened: boolean;
     ExternalPortNum: number;
     InterserverPortNum: number;
     DatabasePortNum: number;
@@ -25,6 +26,7 @@ export let PeerplaySettings: PeerplayData = {
   PublicAPIPort: 0,
   PrivateAPIPort: 0,
   LocalPortNum: 0,
+  ExternalServerOpened: false,
   ExternalPortNum: 0,
   InterserverPortNum: 0,
   DatabasePortNum: 0,

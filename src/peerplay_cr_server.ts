@@ -152,6 +152,7 @@ async function main(argv: string[]) {
       PublicAPIPort: PublicAPIPort,
       PrivateAPIPort: PrivateAPIPort,
       LocalPortNum: LocalPortNum,
+      ExternalServerOpened: SlpExternalServer,
       ExternalPortNum: ExternalPortNum,
       InterserverPortNum: InterserverPortNum,
       DatabasePortNum: DatabasePortNum,
