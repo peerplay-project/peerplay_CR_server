@@ -3,6 +3,8 @@ import chalk from "chalk";
 import { PeerplayData } from "../interface";
 
 interface arg {
+  component: string;
+  external_server_opened: boolean;
   port: number;
   port_range: number;
   task: ListrTaskWrapper<any, any>;
@@ -19,13 +21,13 @@ interface upnpConfigInterface {
     UDP: boolean;
   };
   database: {
-    TCP: boolean,
-    UDP: boolean
+    TCP: boolean;
+    UDP: boolean;
   };
   API: {
-    TCP: boolean,
-    UDP: boolean,
-  },
+    TCP: boolean;
+    UDP: boolean;
+  };
   refreshrate: number;
 }
 
@@ -57,6 +59,8 @@ export const openPortTask = new Listr(
       task: async (ctx, task) => {
         const PeerplayData: PeerplayData = ctx.peerplay_data;
         const result = await openPort({
+          component: "INTERSERVER",
+          external_server_opened: PeerplayData.ExternalServerOpened,
           port: PeerplayData.InterserverPortNum,
           port_range: PeerplayData.MinimalPortRange,
           task: task,
@@ -65,11 +69,15 @@ export const openPortTask = new Listr(
         upnpConfig.interserver = result.upnp_settings;
         task.title = result.upnp_config_results.title;
         task.output = result.upnp_config_results.output;
-        if (result.upnp_config_results.status === "warning"){
-          ctx.warning_messages.push('UPNP/INTERSERVER : ' + result.upnp_config_results.output)
+        if (result.upnp_config_results.status === "warning") {
+          ctx.warning_messages.push(
+            "UPNP/INTERSERVER : " + result.upnp_config_results.output
+          );
         }
-        if (result.upnp_config_results.status === "error"){
-          ctx.error_messages.push('UPNP/INTERSERVER : ' + result.upnp_config_results.output)
+        if (result.upnp_config_results.status === "error") {
+          ctx.error_messages.push(
+            "UPNP/INTERSERVER : " + result.upnp_config_results.output
+          );
         }
         await new Promise((resolve) => setTimeout(resolve, 1000));
       },
@@ -80,15 +88,17 @@ export const openPortTask = new Listr(
 
       task: async (ctx, task) => {
         const PeerplayData: PeerplayData = ctx.peerplay_data;
-        if (PeerplayData.ExternalPortNum == 0) {
+        if (PeerplayData.ExternalServerOpened === false) {
           upnpConfig.external = { TCP: false, UDP: false };
           description.push("Peerplay : External", "Peerplay : External");
           task.title = chalk.gray(
             "Trying to Open External Port - Port Not Specified"
           );
-          task.skip();
+          task.skip('Port Not Specified');
         } else {
           const result = await openPort({
+            component: "EXTERNAL",
+            external_server_opened: PeerplayData.ExternalServerOpened,
             port: PeerplayData.ExternalPortNum,
             port_range: PeerplayData.MinimalPortRange,
             task: task,
@@ -97,11 +107,15 @@ export const openPortTask = new Listr(
           upnpConfig.external = result.upnp_settings;
           task.title = result.upnp_config_results.title;
           task.output = result.upnp_config_results.output;
-          if (result.upnp_config_results.status === "warning"){
-            ctx.warning_messages.push('UPNP/EXTERNAL : ' + result.upnp_config_results.output)
+          if (result.upnp_config_results.status === "warning") {
+            ctx.warning_messages.push(
+              "UPNP/EXTERNAL : " + result.upnp_config_results.output
+            );
           }
-          if (result.upnp_config_results.status === "error"){
-            ctx.error_messages.push('UPNP/EXTERNAL : ' + result.upnp_config_results.output)
+          if (result.upnp_config_results.status === "error") {
+            ctx.error_messages.push(
+              "UPNP/EXTERNAL : " + result.upnp_config_results.output
+            );
           }
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
@@ -112,6 +126,8 @@ export const openPortTask = new Listr(
       task: async (ctx, task) => {
         const PeerplayData: PeerplayData = ctx.peerplay_data;
         const result = await openPort({
+          component: "DATABASE",
+          external_server_opened: PeerplayData.ExternalServerOpened,
           port: PeerplayData.DatabasePortNum,
           port_range: PeerplayData.MinimalPortRange,
           task: task,
@@ -120,11 +136,15 @@ export const openPortTask = new Listr(
         upnpConfig.database = { UDP: false, TCP: result.upnp_settings.TCP };
         task.title = result.upnp_config_results.title;
         task.output = result.upnp_config_results.output;
-        if (result.upnp_config_results.status === "warning"){
-          ctx.warning_messages.push('UPNP/DATABASE : ' + result.upnp_config_results.output)
+        if (result.upnp_config_results.status === "warning") {
+          ctx.warning_messages.push(
+            "UPNP/DATABASE : " + result.upnp_config_results.output
+          );
         }
-        if (result.upnp_config_results.status === "error"){
-          ctx.error_messages.push('UPNP/DATABASE : ' + result.upnp_config_results.output)
+        if (result.upnp_config_results.status === "error") {
+          ctx.error_messages.push(
+            "UPNP/DATABASE : " + result.upnp_config_results.output
+          );
         }
         await new Promise((resolve) => setTimeout(resolve, 1000));
       },
@@ -133,22 +153,40 @@ export const openPortTask = new Listr(
       title: "Trying to Open API Port",
       task: async (ctx, task) => {
         const PeerplayData: PeerplayData = ctx.peerplay_data;
-        const result = await openPort({
-          port: PeerplayData.PublicAPIPort,
-          port_range: PeerplayData.MinimalPortRange,
-          task: task,
-          description: "Peerplay : API",
-        });
-        upnpConfig.API = { UDP: false, TCP: result.upnp_settings.TCP };
-        task.title = result.upnp_config_results.title;
-        task.output = result.upnp_config_results.output;
-        if (result.upnp_config_results.status === "warning"){
-          ctx.warning_messages.push('UPNP/API : ' + result.upnp_config_results.output)
+        if (PeerplayData.ExternalServerOpened === false) {
+          upnpConfig.external = { TCP: false, UDP: false };
+          description.push("Peerplay : API", "Peerplay : API");
+          task.title = chalk.gray(
+            "Trying to Open API Port - External Server Disabled"
+          );
+          task.skip('External Server Disabled');
+        } else {
+          const result = await openPort({
+            component: "API",
+            external_server_opened: PeerplayData.ExternalServerOpened,
+            port: PeerplayData.PublicAPIPort,
+            port_range: PeerplayData.MinimalPortRange,
+            task: task,
+            description: "Peerplay : API",
+          });
+          upnpConfig.API = { UDP: false, TCP: result.upnp_settings.TCP };
+          task.title = result.upnp_config_results.title;
+          task.output = result.upnp_config_results.output;
+          if (result.upnp_config_results.status === "warning") {
+            ctx.warning_messages.push(
+              "UPNP/API : " + result.upnp_config_results.output
+            );
+          }
+          if (result.upnp_config_results.status === "error") {
+            ctx.error_messages.push(
+              "UPNP/API : " + result.upnp_config_results.output
+            );
+          }
+          if (result.upnp_config_results.status === "skip") {
+            task.skip(result.upnp_config_results.output);
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
-        if (result.upnp_config_results.status === "error"){
-          ctx.error_messages.push('UPNP/API : ' + result.upnp_config_results.output)
-        }
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       },
     },
     {
@@ -208,19 +246,19 @@ const openPortResult = async (
   args: arg
 ) => {
   const output = stringValue;
-  let color_title = ""
+  let color_title = "";
   switch (color) {
     case chalk.green:
-      color_title = color(args.task.title + ' [OK]');
-      return { title:color_title, output:output, status:'success' };
+      color_title = color(args.task.title + " [OK]");
+      return { title: color_title, output: output, status: "success" };
     case chalk.yellow:
-      color_title = color(args.task.title + ' [WARNING]');
-      return { title:color_title, output:output, status:'warning' };
+      color_title = color(args.task.title + " [WARNING]");
+      return { title: color_title, output: output, status: "warning" };
     case chalk.red:
-      color_title = color(args.task.title + ' [ERROR]');
-      return { title:color_title, output:output, status:'errors' };
+      color_title = color(args.task.title + " [ERROR]");
+      return { title: color_title, output: output, status: "errors" };
     default:
-      return { title:color_title, output:output, status:'unknown' };
+      return { title: color_title, output: output, status: "unknown" };
   }
 };
 
@@ -261,7 +299,19 @@ const verifyPortMapping = async (results: any, args: arg, err: any) => {
 };
 
 const openPort = async (args: arg) => {
-  // try open tcp and udp port
+  if ((args.component === "EXTERNAL" || args.component === "API") && args.external_server_opened === false) {
+    return {
+      upnp_settings: { TCP: false, UDP: false },
+      upnp_config_results: {
+        title: chalk.blue(args.task.title + " [SKIPPED]"),
+        output: "External Server is not opened",
+        status: "skip",
+      },
+    };
+  }
+  else
+  {
+    // try open tcp and udp port
   try {
     const natUpnp = require("nat-upnp");
     const client = natUpnp.createClient();
@@ -310,17 +360,17 @@ const openPort = async (args: arg) => {
         status: openPortResults.status,
       },
     };
-
   } catch (err) {
     const output = `Failed to open port`;
     return {
       upnp_settings: { TCP: false, UDP: false },
       upnp_config_results: {
-        title: chalk.red(args.task.title + ' [ERROR]'),
+        title: chalk.red(args.task.title + " [ERROR]"),
         output: output,
         status: "error",
       },
     };
+  }
   }
 };
 
@@ -355,7 +405,7 @@ const UpnpKeeper = async (
     tcpOrUdp: ["TCP", "UDP", "TCP", "UDP", "TCP", "UDP", "TCP", "UDP"],
   };
   const stage = [0, 1, 2, 3, 4, 5, 6, 7];
-  let exception = false
+  let exception = false;
   while (!exception) {
     try {
       for (const number of stage) {
@@ -371,8 +421,10 @@ const UpnpKeeper = async (
         }
       }
     } catch (error) {
-      exception = true
+      exception = true;
     }
-    await new Promise(resolve => setTimeout(resolve, UpnpConfig.refreshrate * 1000));
+    await new Promise((resolve) =>
+      setTimeout(resolve, UpnpConfig.refreshrate * 1000)
+    );
   }
 };
