@@ -185,6 +185,7 @@ async function sendToRaw(
       JSON.stringify(send_msg.toJSON()) ===
         JSON.stringify(send_peer_msg.slice(92))
     ) {
+      //console.log("Message Send");
       server.send(
         send_peer_msg,
         0,
@@ -198,9 +199,7 @@ async function sendToRaw(
         }
       );
     } else {
-      console.log(
-        "Invalid Network Type or Password, or damaged packet : Abort Send"
-      );
+      //console.log("Invalid Network Type or Password, or damaged packet : Abort Send");
     }
   } else {
     console.log(`Invalid Destination Address :` + patched_address);
@@ -258,6 +257,10 @@ async function onMessage(peer_msg: Buffer, rinfo: AddressInfo): Promise<void> {
     const peer = manager.get(AddressInfo);
     let payload = Buffer.from(msg).slice(1);
     onPacket(peer.AddressInfo, type, payload);
+  }
+  else
+  {
+    console.log("Invalid Network Type or Password, or damaged packet : Abort Receive");
   }
 }
 
