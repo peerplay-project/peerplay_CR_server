@@ -7,7 +7,7 @@ import {
 } from "../../../toolkit";
 import { isString } from "util";
 import { SLP_ROUTER } from "../routers/default";
-
+export let external_server_started = false;
 class Peer {
   AddressInfo: AddressInfo;
   constructor(public rinfo: AddressInfo) {
@@ -167,6 +167,7 @@ async function onMessage(msg: Buffer, rinfo: AddressInfo): Promise<void> {
 
 export function start_EXTERNAL_USRV(port: number) {
   server.bind(port);
+  external_server_started = true;
 }
 
 export async function sendTo_EXTERNAL_USRV(
