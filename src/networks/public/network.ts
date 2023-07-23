@@ -39,7 +39,7 @@ export let strict_mode = false
 export const DASH = Buffer.alloc(1); // buffer de taille 1
 DASH.write("-");
 export const PASSWORD = Buffer.alloc(36); // buffer de taille 36
-PASSWORD.write("WORLD");
+PASSWORD.write("GEO_WORLD");
 export const SLASH = Buffer.alloc(1); // buffer de taille 1
 SLASH.write("/");
 export const POOL = Buffer.alloc(36); // buffer de taille 36
@@ -56,6 +56,7 @@ export function start_USRV(
     frames: ["◜", "◝", "◞", "◟"],
   };
   // Start All UDP Servers
+
   server_info = {
     address: PeerplayData.ip,
     local: PeerplayData.LocalPortNum,
@@ -66,8 +67,12 @@ export function start_USRV(
     minimal_port_range: PeerplayData.MinimalPortRange
   };
   start_LOCAL_USRV(PeerplayData.LocalPortNum);
-  start_EXTERNAL_USRV(PeerplayData.ExternalPortNum);
   start_INTERSERVER_USRV(server_info.address,server_info.interserver_local,server_info.interserver_internet,PeerplayData.DatabasePassword);
+  console.log(PeerplayData.ExternalServerOpened)
+  if (PeerplayData.ExternalServerOpened) {
+    console.log("Start external")
+    start_EXTERNAL_USRV(PeerplayData.ExternalPortNum);
+  }
   const ora = require("ora-classic");
   if (process.env.NODE_ENV === "production") {
     const spinner = ora("");
