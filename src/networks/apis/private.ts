@@ -240,20 +240,26 @@ export class PrivateRouter {
             if (
               typeof ctx.request.query.network_key === "string" &&
               ctx.request.query.network_key !== "" &&
-              ctx.request.query.network_key.length <= 36
+              ctx.request.query.network_key.length <= 29 &&
+              typeof ctx.request.query.allow_cheats === "string" &&
+              (ctx.request.query.allow_cheats === "true" ||
+                ctx.request.query.allow_cheats === "false") &&
+              typeof ctx.request.query.allow_mods === "string" &&
+              (ctx.request.query.allow_mods === "true" ||
+                ctx.request.query.allow_mods === "false")
             ) {
               // @ts-ignore
-              filter_settings.password = `PWD_${ctx.request.query.network_key.slice(0, 32)}`;
+              filter_settings.password = `PWD_${ctx.request.query.allow_mods === "true" ? "M":"O"}${ctx.request.query.allow_cheats === "true" ? "C":"L"}_${ctx.request.query.network_key.slice(0, 29)}`;
               filter_settings_processed = true;
             } else {
               // @ts-ignore
               if (ctx.request.query.network_key === "") {
                 // @ts-ignore
-                filter_settings.password = `PWD_${uuidv4().slice(0, 32)}`;
+                filter_settings.password = `PWD_${ctx.request.query.allow_mods === "true" ? "M":"O"}${ctx.request.query.allow_cheats === "true" ? "C":"L"}_${uuidv4().slice(0, 29)}`;
                 filter_settings_processed = true;
               } else {
                 filter_settings_error =
-                  "Missing or Invalid Arguments: Password must be a string (not empty and limited to 36 characters)";
+                  "Missing or Invalid Arguments: Password must be a string (not empty and limited to 29 characters)";
               }
             }
             break;
@@ -273,10 +279,9 @@ export class PrivateRouter {
           default:
             filter_settings_error = "Invalid Method";
         }
-      }
-      else
-      {
-        filter_settings_error = "External Server is Running, Filter Settings Cannot Be Changed";
+      } else {
+        filter_settings_error =
+          "External Server is Running, Filter Settings Cannot Be Changed";
       }
       if (filter_settings_processed) {
         change_filter_settings(
@@ -294,8 +299,7 @@ export class PrivateRouter {
             network_type: filter_settings.network_type,
             password: filter_settings.password,
             strict_mode: filter_settings.strict_mode,
-
-          }
+          },
         };
       } else {
         ctx.status = 400;
