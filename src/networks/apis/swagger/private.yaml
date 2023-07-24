@@ -103,7 +103,17 @@ paths:
           description: This property represents the password_key used for filter the network (used for private / party networks or championships)
           schema:
             type: string
-            maxLength: 36
+            maxLength: 29
+        - in: query
+          name: allow_cheats
+          description: This property allow to configure your password to allow or refuse cheats
+          schema:
+            type: boolean
+        - in: query
+          name: allow_mods
+          description: This property allow to configure your password to allow or refuse mods
+          schema:
+            type: boolean
       responses:
         "200":
           description: Success
