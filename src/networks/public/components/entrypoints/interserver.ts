@@ -110,6 +110,7 @@ function clearCacheItem<T, U extends { expireAt: number }>(map: Map<T, U>) {
 function addr2str(rinfo: AddressInfo) {
   return `${rinfo.address}/${rinfo.port}/${rinfo.family}`;
 }
+
 function str2addr(str: string) {
   const data = str.split("/");
   const rinfo: {
