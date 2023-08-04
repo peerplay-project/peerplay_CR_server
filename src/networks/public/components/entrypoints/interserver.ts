@@ -325,8 +325,7 @@ export async function sendBroadcast_INTERSERVER_USRV(
             // @ts-ignore : ignore all typescript errors
             const node: NodesTable = result.doc as NodesTable;
             if (
-              ncryptObject.decrypt(node.address) !== server_ip &&
-              node.interserver_port !== server_port
+              ncryptObject.decrypt(node.address) !== server_ip || node.interserver_port !== server_port
             ) {
               sendTo_INTERSERVER_USRV({
                 address: {
